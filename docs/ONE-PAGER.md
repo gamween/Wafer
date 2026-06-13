@@ -1,75 +1,72 @@
-# Wafer — One-pager (Hedera)
+# Wafer — One-pager (working draft, aligning — not locked)
 
-> InfraFi liquidity for DePIN, on Hedera. HTS-native, zero Solidity.
-> Track: Hedera — Tokenization ($3,000), plus No Solidity and (stretch) AI & Agentic Payments.
+> InfraFi liquidity for DePIN, on Hedera. Pooled investor capital finances curated deals;
+> repayments grow NAV. Settlement: native HBAR (testnet) — production target USDC.
+> Target track: Hedera Tokenization. FR version: [`ONE-PAGER.fr.md`](ONE-PAGER.fr.md).
 
-### The product
+## The idea
 
-DePIN operators (compute and GPU, wireless, mapping, sensors, energy) must spend on hardware
-today to earn on-chain rewards tomorrow. Wafer closes that cash-flow gap: an operator sells a
-share of its future rewards for immediate liquidity, and investors hold tokenized exposure to a
-basket of reward streams, tradable at any time. This is "InfraFi" — financing decentralized
-physical infrastructure with its own on-chain revenue.
+DePIN operators (GPU/compute, wireless, mapping, energy) must buy hardware today to earn
+on-chain rewards over months. Wafer finances that gap and turns it into a **liquid,
+NAV-appreciating fund share**. DePIN is the flagship category; the same rails finance any deal
+with an advance, a repayment and a maturity.
 
-Example: a GPU operator expects about 10,000 USDC of rewards over 90 days. It receives 9,000
-USDC today to deploy more hardware. Over the term, its rewards (10,000 USDC) flow into the
-vault; the 1,000 USDC spread (about 11% over three months, illustrative) is the yield, shared
-across pool holders.
+## Two sides (Centrifuge / Maple model)
 
-### The architecture decision
+- **Investors** deposit HBAR into a pool (by category + risk class, e.g. `GPU-A`) and receive a
+  fungible, NAV-appreciating **pool share**. Redeem at NAV any time. Exposure is **diversified
+  across all the pool's deals** — a tokenized short-term credit fund. You don't pick a single
+  deal; you buy the pool.
+- **Companies** (DePIN operators first) **propose a deal**: company, description, advance,
+  repayment, maturity, category. An **admin** reviews and assigns a **risk class** → the matching
+  pool **finances** it (advances HBAR + mints a reward-claim NFT held by the vault).
 
-One token per device would mean a thousand markets for a thousand devices: fragmented
-liquidity, an unusable secondary market. Instead, reward streams are grouped into standardized
-pools by network / category and risk class, and each pool issues a single fungible token. The
-investor buys a share of a legible basket — network, risk — not a single device. The result
-behaves like a tokenized short-term infrastructure-income fund.
+So "deals" live on the **supply side** (what the pool finances), curated by the admin. Investors
+fund the **pool**, not an individual deal. (Deal-specific backing = Goldfinch-style junior
+tranches — a V2 option, see below.)
 
-Pools: e.g. GPU-A, WIFI-B, ENERGY-A (category + risk class). Maturity stays a property of each
-claim (NFT) inside the vault, not a pool-splitting axis — the vault is permanent and never
-closes.
+## Why DePIN is the wow
 
-### Lifecycle
+DePIN is the one RWA category whose cashflow is **natively on-chain**: real hardware earns
+protocol rewards automatically to an on-chain address — no invoice, no bank, no fiat bridge. So
+repayment needs **no trust in a human paying** and no off-chain settlement: the operator
+**routes its on-chain reward stream to the vault** for the term, and **NAV ticks up live** as
+rewards land. (Generic, non-DePIN deals repay by an on-chain send — same rails, weaker trust
+story. DePIN is where the model is trust-minimized.)
 
-1. An operator (or a fleet aggregator) requests financing against its future rewards.
-2. The protocol assesses the claim (network, the device's reward history, uptime, credit risk).
-3. The reward claim is tokenized as an HTS NFT (metadata: network, expected rewards, term,
-   score, status). The NFT stays in the vault; it is not for investors.
-4. The NFT is deposited into the matching vault (e.g. GPU-A), which advances liquidity (9,000
-   USDC) to the operator.
-5. The operator routes its on-chain rewards to the vault for the financing term.
-6. The vault mints HTS fungible shares, which investors buy.
-7. Shares trade on SaucerSwap against USDC (GPU-A / USDC pool).
-8. As rewards arrive, the vault's net asset value (NAV) rises; when a claim reaches its term the
-   NFT moves to Settled (or is burned) and is replaced by a new one.
-9. Exit: the investor sells shares on SaucerSwap, or redeems them against the vault at NAV
-   (their own shares are burned, their pro-rata USDC is paid out). The pool itself is permanent.
+## Lifecycle
 
-### Hedera stack
+1. A company proposes a deal (off-chain intake).
+2. Admin reviews + assigns a class → routes it to the matching pool.
+3. The pool **finances** it: advances HBAR to the company, mints the claim NFT (held by the vault).
+4. **Repayment** flows in — DePIN reward routing; installments or lump → pool **NAV rises**.
+5. On full repayment the **NFT burns** (claim Repaid). On default → **write-down** (NAV falls),
+   loss shared across the pool.
+6. Investors hold / redeem pool shares at NAV throughout; secondary market on SaucerSwap
+   (share / WHBAR).
 
-- HTS non-fungible token (NFT): a device's or fleet's reward claim, held in custody by the
-  vault.
-- HTS fungible token: the pool shares (GPU-A, WIFI-B, ENERGY-A), transferable and tradable.
-- HTS KYC and freeze keys: token-level access control and compliance.
-- HTS custom fees: a low protocol fee, kept off per-transfer where possible.
-- HCS (Consensus Service): an immutable audit trail — NAV published periodically + lifecycle
-  events.
-- Scheduled Transactions (HIP-423): optional set-and-forget reward sweeps.
-- Mirror Node REST: the read layer; the frontend recomputes NAV independently.
+## Hedera stack
 
-The entire product runs on native Hedera services driven by the JavaScript/TypeScript SDK, with
-no Solidity contract.
+- **HTS fungible pool-share** token (KYC + freeze keys, low fractional fee) — the tokenized fund unit.
+- **HTS reward-claim NFT** — the on-chain record of each financed deal, held by the vault.
+- **`WaferVault`** smart contract (HSCS, via `@hiero-ledger/hiero-contracts`) — pools, financing,
+  NAV, deposit/redeem, settlement, default. **Native HBAR** settlement.
+- **SaucerSwap** — secondary market (share / WHBAR).
+- Live on testnet: vault `0xc452D23791F9fC0c43B82E298b337B0A3525cd0A`, pool GPU-A, Sourcify-verified.
 
-### Settlement
+## Open / to refine (not locked)
 
-DePIN rewards are paid on-chain in USDC. The operator routes its rewards to the vault for the
-financing term; each payment updates the NAV. When a claim reaches its term the NFT is Settled.
-On underperformance or if routing stops (default), the NFT moves to Defaulted, NAV drops and the
-loss is borne by the vault, spread across all holders. No fiat bridge: the entire cash flow is
-natively on-chain.
+- **Liquidity:** shares are elastic (mint on deposit / burn on redeem). Redemptions served from
+  idle HBAR; when the pool is fully deployed, a redemption **queue/epoch** (Centrifuge / Maple style).
+- **Deal-specific backing (V2):** Goldfinch-style **tranches** — back a single deal as junior /
+  first-loss vs the diversified senior pool — if we want true "invest in this deal" exposure.
+- **Settlement asset:** HBAR for the testnet MVP; **USDC** the production target (stable denomination).
+- **Repayment trust:** DePIN = on-chain reward routing (trust-minimized); other categories =
+  on-chain send (testnet) / SPV-escrow (production).
+- **Proposals:** off-chain intake + on-chain deal record on admin approval (metadata off-chain).
 
-### Why Hedera
+## Demo
 
-HTS provides native tokens (NFTs and fungibles) with built-in compliance controls (KYC,
-freeze), low fees and fast finality — useful for an instrument whose NAV is updated
-continuously by small reward payments. DePIN and real-world asset tokenization are a stated
-focus for Hedera in 2026.
+Deposit HBAR → pool shares at NAV. Admin finances a DePIN deal (advance + NFT). Reward HBAR
+streams into the vault → **NAV ticks up live**. The NFT burns at settlement. Investor redeems at
+NAV for the gain. Secondary swap on SaucerSwap as the alternative exit.
