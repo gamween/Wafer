@@ -63,8 +63,11 @@ ALIGN DOCS (so no repo doc contradicts the source of truth):
   `financeClaim`, `deposit`, `redeem`, `settleRewards`, `markDefault`, `navPerShare` view; events
   `Deposit/Redeem/ClaimFinanced/RewardRouted/Default`; `poolCount`/`pools(i)`/`shareBalanceOf` views.
 - Pool-share: fungible, **6 dp**, INFINITE supply, 0.10% fractional fee (collector = vault, all
-  collectors exempt). Claim NFT collection held by the vault. Mock-USDC: fungible 6 dp the vault
-  creates (real USDC `0.0.429274` is a config swap).
+  collectors exempt). Claim NFT collection held by the vault.
+- Settlement token (auto-detect at deploy): **if the operator holds real Circle USDC
+  (`0.0.429274`, 6 dp) with a positive balance, use it** — `setUsdc(0.0.429274)`; otherwise the
+  vault creates a mock-USDC HTS token (6 dp). The operator auto-associates (`-1`), so the human
+  may fund real USDC before the run. Record which was used in `RUN-REPORT.md`. Same code path.
 - **Check `responseCode == 22` and revert** on every HTS call (or use `SafeHTS`). Token-create
   funcs are `payable`; deploy script attaches ~60 HBAR + `gasLimit` 10M. Money = integer 6-dp
   micro-units. NAV = `totalShares==0 ? 1e6 : totalAssets*1e6/totalShares`.

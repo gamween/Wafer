@@ -149,9 +149,11 @@ Use **V1 (Uniswap-v2 style)** — one call creates the pool + seeds liquidity. L
 
 ## 7. Settlement asset
 
-The operator (`0.0.9185964`) holds no USDC, so the vault **creates a mock-USDC HTS token (6 dp)**
-and uses it as the settlement asset for the demo. Real Circle USDC testnet is `0.0.429274` — a
-one-line config swap once the account is funded with real USDC.
+At deploy, the settlement asset is **auto-detected**: if the operator (`0.0.9185964`) holds real
+Circle USDC (testnet `0.0.429274`, 6 dp) with a positive balance, the vault uses it
+(`setUsdc(0.0.429274)`); otherwise it **creates a mock-USDC HTS token (6 dp)**. The operator has
+unlimited auto-association (`maxAutomaticTokenAssociations = -1`), so funding it with testnet USDC
+(Circle faucet) is enough — no manual association — and the demo runs on real USDC.
 
 ## 8. Trust model
 
