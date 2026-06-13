@@ -12,7 +12,6 @@ on-chain yield. "InfraFi" is the category; Wafer is the product.
 - **One-pager (source of truth, judge-facing):** [`docs/ONE-PAGER.md`](docs/ONE-PAGER.md)
 - **Full technical spec:** [`SPEC.md`](SPEC.md)
 - **Sponsor / track strategy:** [`docs/TRACKS.md`](docs/TRACKS.md)
-- **Overnight build goal:** [`GOAL.md`](GOAL.md)
 
 ETHGlobal New York 2026 · Hedera Testnet (chain 296) · target track: **Hedera Tokenization**.
 
