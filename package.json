@@ -1,0 +1,29 @@
+{
+  "name": "sluice",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "InfraFi liquidity for DePIN on Hedera — HTS-native, zero Solidity.",
+  "license": "MIT",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "bootstrap": "tsx scripts/bootstrap.ts",
+    "demo": "tsx scripts/demo.ts",
+    "api": "tsx watch src/api/server.ts",
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@hashgraph/sdk": "^2.62.0",
+    "dotenv": "^16.4.5",
+    "fastify": "^5.2.0",
+    "@fastify/cors": "^10.0.1"
+  },
+  "devDependencies": {
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2",
+    "@types/node": "^22.10.2"
+  }
+}
