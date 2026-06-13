@@ -1,4 +1,4 @@
-# Sluice — One-pager (Hedera)
+# Wafer — One-pager (Hedera)
 
 > InfraFi liquidity for DePIN, on Hedera. HTS-native, zero Solidity.
 > Track: Hedera — Tokenization ($3,000), plus No Solidity and (stretch) AI & Agentic Payments.
@@ -6,7 +6,7 @@
 ### The product
 
 DePIN operators (compute and GPU, wireless, mapping, sensors, energy) must spend on hardware
-today to earn on-chain rewards tomorrow. Sluice closes that cash-flow gap: an operator sells a
+today to earn on-chain rewards tomorrow. Wafer closes that cash-flow gap: an operator sells a
 share of its future rewards for immediate liquidity, and investors hold tokenized exposure to a
 basket of reward streams, tradable at any time. This is "InfraFi" — financing decentralized
 physical infrastructure with its own on-chain revenue.

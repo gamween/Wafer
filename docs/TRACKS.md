@@ -11,7 +11,7 @@ The single highest-leverage decision is the **pure-HTS / no-Solidity architectur
 codebase competes for all three reachable Hedera tracks. A Solidity vault would forfeit two of
 them.
 
-| Track | $ | Qualifies | How Sluice hits it |
+| Track | $ | Qualifies | How Wafer hits it |
 |---|---|---|---|
 | **Tokenization on Hedera** | $3,000 (2×$1,500) | ✅ lead with this | HTS fungible pool-share (tokenized RWA fund share) + claim NFTs, managed via SDK. Hits the bonus list directly: **KYC-gated fund shares** (their literal example), freeze/pause keys, **custom fractional fee** (protocol take-rate). |
 | **No Solidity Allowed** | $3,000 (3×$1,000) | ✅ near-free | SDK-only by construction. Combines **3** native services: HTS + HCS (NAV/audit topic) + Scheduled Transactions (reward sweep); Mirror Node is the read layer. |

@@ -55,7 +55,7 @@ export class VaultService {
   /** Finance a claim: mint the NFT to the vault and advance USDC to the operator. */
   async financeClaim(p: { operatorId: AccountId; advance: bigint; expected: bigint; termDays: number }): Promise<Claim> {
     // store mutable detail off the NFT (status changes over time); pointer goes on-chain
-    const meta = `sluice://${this.pool.id}/claim`; // TODO: HCS-1 / IPFS pointer to full JSON
+    const meta = `wafer://${this.pool.id}/claim`; // TODO: HCS-1 / IPFS pointer to full JSON
     const serial = await mintClaimNft(client, this.claimNftId, meta);
 
     await execTransfer(

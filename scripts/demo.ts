@@ -27,7 +27,7 @@ async function main() {
   const log = (label: string, nav: { navPerShare: number; activeClaims: number }) =>
     console.log(`  ${label.padEnd(24)} NAV=${nav.navPerShare.toFixed(6)}  active claims=${nav.activeClaims}`);
 
-  console.log(`\n=== Sluice demo · pool ${def.id} ===\n`);
+  console.log(`\n=== Wafer demo · pool ${def.id} ===\n`);
 
   log("genesis", await vault.currentNav());
 

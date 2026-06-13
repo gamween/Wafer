@@ -1,11 +1,11 @@
-# Sluice
+# Wafer
 
 > InfraFi liquidity for DePIN. Operators sell their future on-chain rewards for upfront USDC; investors hold a NAV-appreciating, KYC-gated pool share. Built entirely on Hedera with the SDK — **zero Solidity**.
 
-Sluice is a permanent, NAV-appreciating tokenized fund on Hedera (HTS) that buys DePIN
-operators' future on-chain rewards for upfront USDC. The name: a *sluice* is a gate that
-meters and channels a flow into a reservoir — exactly what the protocol does with reward
-streams. "InfraFi" is the category; Sluice is the product.
+Wafer is a permanent, NAV-appreciating tokenized fund on Hedera (HTS) that buys DePIN
+operators' future on-chain rewards for upfront USDC. The name: a *wafer* is the thin slice of
+silicon every GPU and chip is cut from — the physical substrate of the compute economy that
+Wafer turns into liquid, on-chain yield. "InfraFi" is the category; Wafer is the product.
 
 - **One-pager (judge-facing):** [`docs/ONE-PAGER.md`](docs/ONE-PAGER.md)
 - **Full technical spec:** [`SPEC.md`](SPEC.md)
@@ -17,7 +17,7 @@ ETHGlobal New York 2026 · brand-new project · built on Hedera Testnet.
 
 1. A DePIN operator (GPU/compute, wireless, mapping, energy) needs capital today; their
    rewards arrive on-chain over time. They sell a slice of those future rewards.
-2. Sluice records the financed claim as an **HTS NFT** held by a pool vault, and advances
+2. Wafer records the financed claim as an **HTS NFT** held by a pool vault, and advances
    USDC to the operator.
 3. Investors deposit USDC and receive a fungible **HTS pool-share token** — a share of a
    permanent vault, standardized by network + risk (e.g. `GPU-A`, `WIFI-B`).
@@ -30,7 +30,7 @@ Everything settles in on-chain USDC (testnet `0.0.429274`). No fiat bridge, no S
 
 ```
                   ┌─────────────────────────────────────────────┐
-   DePIN operator │  Sluice operator backend (TypeScript, SDK)  │  Investor
+   DePIN operator │  Wafer operator backend (TypeScript, SDK)  │  Investor
    ──────────────▶│                                             │◀──────────
    routes rewards │  • HTS: pool-share token (mint/burn, KYC)   │  deposits USDC
    (USDC) to vault│  • HTS: reward-claim NFTs (held by vault)   │  holds share

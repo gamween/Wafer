@@ -8,8 +8,8 @@ export interface Pool {
   id: string; // e.g. "GPU-A"
   network: Network;
   risk: RiskClass;
-  name: string; // "Sluice GPU-A Pool Share"
-  symbol: string; // "slGPUA"
+  name: string; // "Wafer GPU-A Pool Share"
+  symbol: string; // "wfGPUA"
   shareTokenId: string;
   topicId: string;
 }

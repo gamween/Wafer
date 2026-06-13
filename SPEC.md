@@ -1,4 +1,4 @@
-# Sluice — Technical Specification
+# Wafer — Technical Specification
 
 Status: hackathon MVP (ETHGlobal NY 2026). Network: Hedera Testnet. Language: TypeScript.
 No Solidity. All settlement in on-chain USDC.
@@ -9,7 +9,7 @@ No Solidity. All settlement in on-chain USDC.
 
 DePIN operators must spend on hardware today (GPUs, wireless hotspots, mapping rigs, energy
 devices) but earn their rewards on-chain over weeks/months. That timing gap is a financing
-problem — "InfraFi". Sluice closes it:
+problem — "InfraFi". Wafer closes it:
 
 - An operator sells a slice of its **future on-chain rewards** for upfront USDC.
 - Investors buy a fungible **pool share** giving exposure to a basket of reward streams,
@@ -159,7 +159,7 @@ This is **trust-minimized and audited-by-design, not trustless** — and we say 
    unchanged either way. All-USDC on-chain settlement already removes the biggest off-chain
    trust vector (no fiat bridge).
 
-Pitch line: *"Sluice is HTS-native and verifiable-by-construction: the operator orchestrates,
+Pitch line: *"Wafer is HTS-native and verifiable-by-construction: the operator orchestrates,
 but the Hashgraph is the source of truth."*
 
 ## 8. API surface (backend)

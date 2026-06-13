@@ -39,13 +39,13 @@ async function main() {
   console.log(`✓ pool-share token  SHARE_TOKEN_ID=${shareTokenId.toString()}`);
 
   const claimNftId = await createClaimCollection(client, {
-    name: "Sluice Reward Claim",
-    symbol: "slCLAIM",
+    name: "Wafer Reward Claim",
+    symbol: "wfCLAIM",
     treasury: vault,
   });
   console.log(`✓ claim NFT coll.   CLAIM_NFT_TOKEN_ID=${claimNftId.toString()}`);
 
-  const topicId = await createNavTopic(client, `Sluice ${def.id} NAV + lifecycle`);
+  const topicId = await createNavTopic(client, `Wafer ${def.id} NAV + lifecycle`);
   console.log(`✓ HCS topic         NAV_TOPIC_ID=${topicId.toString()}`);
 
   console.log(`\nPaste into .env:`);
