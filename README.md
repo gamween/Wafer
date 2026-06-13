@@ -1,111 +1,97 @@
 # Wafer
 
-> InfraFi liquidity for DePIN. Operators sell their future on-chain rewards for upfront USDC; investors hold a NAV-appreciating, KYC-gated pool share. Built entirely on Hedera with the SDK — **zero Solidity**.
+> InfraFi liquidity for DePIN. Operators sell their future on-chain rewards for upfront USDC;
+> investors hold a NAV-appreciating, KYC-gated pool share. A **Solidity vault on Hedera (HSCS)**
+> that creates and manages **HTS tokens**, with a **SaucerSwap** secondary market.
 
-Wafer is a permanent, NAV-appreciating tokenized fund on Hedera (HTS) that buys DePIN
-operators' future on-chain rewards for upfront USDC. The name: a *wafer* is the thin slice of
-silicon every GPU and chip is cut from — the physical substrate of the compute economy that
-Wafer turns into liquid, on-chain yield. "InfraFi" is the category; Wafer is the product.
+Wafer is a permanent, NAV-appreciating tokenized fund on Hedera that buys DePIN operators'
+future on-chain rewards for upfront USDC. The name: a *wafer* is the thin slice of silicon every
+GPU and chip is cut from — the substrate of the compute economy that Wafer turns into liquid,
+on-chain yield. "InfraFi" is the category; Wafer is the product.
 
-- **One-pager (judge-facing):** [`docs/ONE-PAGER.md`](docs/ONE-PAGER.md)
+- **One-pager (source of truth, judge-facing):** [`docs/ONE-PAGER.md`](docs/ONE-PAGER.md)
 - **Full technical spec:** [`SPEC.md`](SPEC.md)
 - **Sponsor / track strategy:** [`docs/TRACKS.md`](docs/TRACKS.md)
+- **Overnight build goal:** [`GOAL.md`](GOAL.md)
 
-ETHGlobal New York 2026 · brand-new project · built on Hedera Testnet.
+ETHGlobal New York 2026 · Hedera Testnet (chain 296) · target track: **Hedera Tokenization**.
 
-## What it does (60 seconds)
+## How it works (60 seconds)
 
-1. A DePIN operator (GPU/compute, wireless, mapping, energy) needs capital today; their
-   rewards arrive on-chain over time. They sell a slice of those future rewards.
-2. Wafer records the financed claim as an **HTS NFT** held by a pool vault, and advances
+1. A DePIN operator (GPU/compute, wireless, mapping, energy) needs capital today; rewards arrive
+   on-chain over time. They sell a slice of those future rewards.
+2. The `WaferVault` contract records the financed claim as an **HTS NFT** it holds, and advances
    USDC to the operator.
-3. Investors deposit USDC and receive a fungible **HTS pool-share token** — a share of a
-   permanent vault, standardized by network + risk (e.g. `GPU-A`, `WIFI-B`).
-4. The operator routes its rewards (USDC) into the vault. NAV per share rises continuously.
-5. Investors exit any time by **redeeming at NAV** (SaucerSwap secondary listing is roadmap).
+3. Investors deposit USDC and receive a fungible **HTS pool-share** token — a share of a
+   permanent vault, standardized by network + risk (e.g. `GPU-A`).
+4. The operator routes its rewards (USDC) into the vault. **NAV per share rises** continuously.
+5. Investors exit any time: **redeem at NAV** (burn shares → USDC), or **swap on SaucerSwap**.
 
-Everything settles in on-chain USDC (testnet `0.0.429274`). No fiat bridge, no Solidity.
+The vault is a smart contract → all logic is on-chain and verifiable. The frontend talks to the
+contract **directly** via a wallet — no backend, no HCS.
 
-## Architecture in one diagram
+## Architecture
 
 ```
-                  ┌─────────────────────────────────────────────┐
-   DePIN operator │  Wafer operator backend (TypeScript, SDK)  │  Investor
-   ──────────────▶│                                             │◀──────────
-   routes rewards │  • HTS: pool-share token (mint/burn, KYC)   │  deposits USDC
-   (USDC) to vault│  • HTS: reward-claim NFTs (held by vault)   │  holds share
-                  │  • HCS: NAV + lifecycle event log (topic)   │  redeems at NAV
-                  │  • Scheduled Tx: reward sweeps (optional)   │
-                  └───────────────┬─────────────────────────────┘
-                                  │ all state on-ledger
-                          ┌───────▼────────┐        ┌────────────────┐
-                          │  Hedera HTS/HCS│◀──────▶│  Mirror Node   │──▶ frontend
-                          │   (testnet)    │  reads │   REST API     │   recomputes NAV
-                          └────────────────┘        └────────────────┘
+  operator ──finance/settle──▶  WaferVault.sol (Hedera EVM)  ◀──deposit/redeem── investor
+                                via @hiero-ledger/hiero-contracts:
+   front (Next.js + viem) ────▶  creates/holds HTS pool-share + reward-claim NFTs,
+   reads contract views          mock-USDC settlement, NAV, deposit/redeem/settle
+   + Mirror Node                        │                    │
+                              ┌─────────▼──────┐    ┌─────────▼──────┐
+                              │  Hedera HTS    │    │  SaucerSwap V1 │  share/USDC pool
+                              └─────────┬──────┘    └────────────────┘
+                                        │ reads
+                              ┌─────────▼──────┐
+                              │  Mirror Node   │──▶ frontend
+                              └────────────────┘
 ```
-
-The backend orchestrates; the Hashgraph is the source of truth. Every share minted, every
-dollar of NAV, every reward swept is on-ledger and independently reconcilable via the Mirror
-Node — see the trust model in [`SPEC.md`](SPEC.md#7-trust-model).
 
 ## Repo layout
 
 ```
-src/
-  config.ts            env + typed config
-  hedera/
-    client.ts          Hedera Client (operator)
-    tokens.ts          create/mint/burn the pool-share token + claim NFT collection
-    topic.ts           HCS NAV + event topic
-    transfers.ts       atomic deposit / redeem / settlement TransferTransactions
-    kyc.ts             associate + grant/revoke KYC
-    mirror.ts          Mirror Node REST client (NAV history, balances, holders, NFTs)
-  vault/
-    types.ts           domain types (Pool, Claim, NavSnapshot, events)
-    pool.ts            pool registry (GPU-A, WIFI-B, ENERGY-A)
-    nav.ts             NAV engine (amortized-cost model)
-    vault-service.ts   orchestration: deposit, redeem, financeClaim, settle, sweep
-  agent/
-    settlement-agent.ts  optional autonomous agent (Hedera Agent Kit) — AI track
-  api/
-    server.ts          Fastify API
+contracts/WaferVault.sol   the vault — HTS tokens via @hiero-ledger/hiero-contracts
+hardhat.config.ts          Solidity 0.8.24, network testnet (chain 296, Hashio)
 scripts/
-  bootstrap.ts         hour-0 setup: create token + NFT collection + topic, associate USDC
-  demo.ts              scripted end-to-end demo (finance → deposit → reward → NAV up → redeem)
-web/                   frontend (Next.js + Privy) — see web/README.md
+  deploy.ts                deploy vault, create mock-USDC + GPU-A pool, persist addresses
+  saucerswap.ts            create share/USDC pool + add liquidity + sample swap (viem)
+  demo.ts                  full lifecycle live: finance → deposit → settle (NAV↑) → redeem
+  resolve-operator.ts      derive OPERATOR_ID from the key (Mirror Node)
+src/                       TS setup utils kept from foundation (config, SDK client, key
+                           parsing, deployments persistence) — used by scripts for HTS ops
+                           the EVM can't do (e.g. operator auto-association)
+web/                       Next.js + Tailwind + shadcn — talks to the contract via viem
+deployments/testnet.json   committed: vault + token + pool addresses (public ids)
+docs/ONE-PAGER.md · docs/TRACKS.md · SPEC.md · GOAL.md · CONTRIBUTING.md
 ```
 
 ## Quick start
 
 ```bash
-# 1. install (Node 22, pnpm)
 pnpm install
+cp .env.example .env          # OPERATOR_ID/KEY already set — TOP UP HBAR first (see below)
 
-# 2. configure — copy and fill operator credentials from the Hedera portal
-cp .env.example .env
-#   get a testnet account:  https://portal.hedera.com/  (faucet: 100 test HBAR / 24h)
-#   get test USDC:          https://faucet.circle.com/  (Hedera, ~20 USDC / 2h)
+pnpm hardhat compile
+pnpm deploy                   # deploy vault + mock-USDC + GPU-A pool → deployments/testnet.json
+pnpm hardhat verify --network testnet <VAULT_ADDR>   # Sourcify / HashScan
 
-# 3. create on-chain resources (writes token/topic ids back to stdout — paste into .env)
-pnpm bootstrap
+pnpm demo                     # full lifecycle on testnet — watch NAV per share rise, then redeem
+pnpm saucerswap               # create the share/USDC pool + a sample swap (HBAR-permitting)
 
-# 4. run the scripted demo end-to-end
-pnpm demo
-
-# 5. (optional) run the API
-pnpm api
+cd web && pnpm install && pnpm dev    # frontend → contract (deposit / redeem / NAV / activity)
 ```
 
-## 36-hour build plan
+⚠️ **HBAR prerequisite.** Creating HTS tokens from the contract costs ~50–60 HBAR each
+(`msg.value`, excess refunded) and the SaucerSwap pool costs ~$50 in testnet HBAR. The operator
+`0.0.9221779` has ~10 HBAR — **top up at <https://portal.hedera.com/> before deploying**, or the
+on-chain steps will fail with `INSUFFICIENT_PAYER_BALANCE`.
 
-| Window | Goal |
-|---|---|
-| 0–2h  | Accounts + USDC decision (`0.0.429274` vs mock), `pnpm bootstrap`: share token + claim NFT collection + HCS topic |
-| 2–12h | Deposit (mint + atomic transfer + KYC gate) and redeem-at-NAV; NAV computed in backend, published to HCS |
-| 12–24h| Claim NFT minting, settlement/reward-routing transfers, Mirror-Node-driven dashboard, one scheduled sweep |
-| 24–36h| Privy embedded wallet on Hedera EVM, optional SaucerSwap listing (Tokenization submission only), polish, judging script |
+## Test the flow
 
-Stretch (unlocks Hedera's $6k AI track): the autonomous settlement agent in `src/agent/`.
+After `pnpm deploy` + `pnpm demo`, open the app (`cd web && pnpm dev`): connect the dev wallet,
+deposit mock-USDC, watch your share balance + the live NAV, then redeem at NAV. The activity feed
+reads the contract's events from the Mirror Node. SaucerSwap swap is available once `pnpm
+saucerswap` has seeded the pool.
 
 ## License
 

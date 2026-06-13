@@ -1,96 +1,117 @@
-# Wafer — Overnight Autonomous Build Goal
+# Wafer — Overnight Autonomous Build Goal (v2, Solidity vault)
 
-> For an autonomous **Opus 4.8 / ultracode** `/goal` run, working **solo, overnight**, inside
-> this repo (`~/Development/hackathons/Wafer`). Build until every box in **§1 Done** is checked.
-> You may and should use **workflows / subagents** (parallel implementation + adversarial
-> verification). Token cost is not a constraint; correctness and a *working, testable* flow are.
+> For an autonomous **Opus 4.8 / ultracode** `/goal` run, solo, overnight, inside this repo
+> (`~/Development/hackathons/Wafer`). Build until every box in **§1 Done** is checked. Use
+> workflows / subagents (parallel build + adversarial verification). Token cost is not a
+> constraint; a **working, testable, on-testnet flow** is.
+>
+> This SUPERSEDES the previous (no-Solidity) goal. The single source of truth is the one-pager
+> `Wafer — Pitchs Devrel.md` in the Obsidian vault, implemented by `SPEC.md` in this repo.
 
-## 0. Mission (one line)
+## 0. Mission
 
-Fully implement the **Wafer** backend (the decided no-Solidity Hedera vault) and a **wired,
-theme-agnostic frontend skeleton**, deployed and running **live on Hedera Testnet**, so that in
-the morning a human can (a) run the end-to-end flow and (b) just pick a design direction (DA)
-and theme it — everything already built together and perfectly wired.
+Re-architect Wafer to the **smart-contract** design: a Solidity `WaferVault` on Hedera EVM
+(HSCS) that creates and manages HTS tokens, a **SaucerSwap** secondary market, and a **wired
+Next.js + Tailwind + shadcn frontend that talks to the contract directly** (no API). Deployed
+and demonstrated **live on Hedera Testnet**. First **clean** the discarded no-Solidity work.
 
-## 1. Done = (the goal condition — verify each, with evidence)
+## 1. Done = (verify each, with evidence in RUN-REPORT.md)
 
-Stop only when ALL of these are true and demonstrated:
+- [ ] **Clean done** (§3): no-Solidity TS vault, Fastify API, HCS topic, agent stub, and `feat/vault-nav` artifacts removed from the build; deps/scripts updated; `main` has no dead code.
+- [ ] `WaferVault.sol` compiles (`pnpm hardhat compile`), Solidity 0.8.24, using `@hiero-ledger/hiero-contracts@0.1.2`. Unit tests pass for the pure logic (NAV math, share math, default write-down).
+- [ ] **Deployed live on testnet** (`pnpm deploy`): vault deployed; mock-USDC HTS token created; one **GPU-A pool** created (share token + claim NFT); the vault associated/KYC'd for its own tokens. Contract **verified on HashScan** (Sourcify). All public addresses written to `deployments/testnet.json` (committed) and `.env`.
+- [ ] `pnpm demo` runs the **full lifecycle live**, printing HashScan links: financeClaim → investor deposit (USDC→shares at NAV) → operator settleRewards (USDC in) → **navPerShare rises** → redeem at NAV. A funded, KYC'd **demo investor** is provisioned.
+- [ ] `pnpm saucerswap` creates the **share/USDC SaucerSwap V1 pool** + a sample swap (best-effort — if HBAR-blocked, see §2; record the exact blocker, don't fake it).
+- [ ] Frontend builds + runs (`cd web && pnpm dev`): Pools+NAV, Deposit, Redeem, Activity screens **wired to the contract (viem) + Mirror Node**, neutral theme, dev wallet. Deposit/redeem work end-to-end against the live vault (incl. associate + approve flow).
+- [ ] `main` green and runnable from a clean clone + `.env` (+ funded operator); `demo-r1` tag; `RUN-REPORT.md` with addresses, HashScan links, what passed, blockers.
 
-- [ ] `pnpm install` clean; `pnpm typecheck` passes with zero errors.
-- [ ] Unit tests pass (`pnpm test`): NAV engine (amortized-cost math, deposit/redeem share math, default write-down) and vault state transitions, run against a **mock Hedera client** (no network needed).
-- [ ] `pnpm bootstrap` runs **live on testnet**: creates the pool-share HTS token, the reward-claim NFT collection, the HCS topic; sets up the **settlement token** (real USDC `0.0.429274` if the operator holds it, else a freshly-minted **mock-USDC** — see §3); creates a funded, KYC'd **demo investor** account (HBAR for gas + a settlement-token balance to deposit); writes all public ids (incl. the settlement token id) to `.env` **and** to a committed `deployments/testnet.json`. Idempotent (re-running detects existing ids and does not duplicate).
-- [ ] `pnpm demo` runs the full lifecycle **live on testnet** and prints HashScan links: finance a claim → investor deposits USDC → reward sweeps arrive → **NAV per share rises** → investor redeems at NAV. The HCS topic shows the ordered event log.
-- [ ] The API (`pnpm api`) boots and every endpoint in SPEC §8 works against the live pool.
-- [ ] Frontend builds (`pnpm --filter web build`) and runs (`pnpm --filter web dev`); every screen renders **wired to the live API + Mirror Node** with a neutral theme (no design): pools list with live NAV + TVL, deposit form, redeem form, HCS activity feed, claim/portfolio view. Uses a **local dev wallet** (the demo investor), NOT Privy.
-- [ ] `main` is green and runnable from a clean clone + `.env`; `deployments/testnet.json` committed; a `demo-r0` git tag points at the runnable state.
-- [ ] `README.md` has a **"Test the flow"** section (exact commands) and a **"Pick a DA"** section (where/how to theme) — see §7.
-- [ ] A short `RUN-REPORT.md` at repo root: what was built, the live token/topic/account ids + HashScan links, what passed, and anything left open with a clear reason.
+## 2. Prerequisite the human must do BEFORE launching (and you must check)
 
-## 2. Context & sources (read first)
+The operator `0.0.9221779` (EVM `0xdae8992a9b5fe850be63781d1c2e65a3e496f728`, ECDSA key in
+`.env`) needs **lots of testnet HBAR**: ~60 HBAR per HTS create + ~$50-in-HBAR for the SaucerSwap
+pool. It currently has ~10 HBAR. **Top up at <https://portal.hedera.com/>.** At run start, check
+the balance via Mirror Node; if it can't cover token creates, **stop and record it** — build +
+compile + unit-test everything, deploy what HBAR allows, and clearly flag the funding blocker.
+Never fake transactions or HashScan links. The SaucerSwap pool is the most likely HBAR casualty;
+**redeem-at-NAV is the guaranteed exit and must work live** even if SaucerSwap can't be funded.
 
-In-repo (authoritative): `SPEC.md` (full technical spec — follow it), `docs/TRACKS.md` (sponsor
-strategy), `docs/ONE-PAGER.md`, `README.md`, `CONTRIBUTING.md` (git workflow — follow it).
+## 3. CLEAN first (the previous no-Solidity run built dead code)
 
-Reference vault (read for product context + Hedera docs + track wording):
-`/Users/fianso/Library/Mobile Documents/iCloud~md~obsidian/Documents/Fianso's Vault/02 - Areas/Web3/Programs/DVB/Hackathons/ETHGlobal nyc/`
-— especially **`Context.md`** (all Hedera doc links + the Hedera track requirements) and
-`DePIN Liquidity Protocol — Pitchs Devrel.md`. Do NOT modify vault files; they are read-only reference.
+REMOVE (no longer part of the architecture):
+- `src/api/` (Fastify), `src/hedera/topic.ts` (HCS), `src/agent/`, `src/vault/` (TS vault,
+  nav.ts, pool.ts, types.ts), `src/hedera/tokens.ts` / `kyc.ts` / `mirror.ts` / `transfers.ts`
+  and any `mock-ledger.ts` / `ledger-port.ts` / `ledger.ts` / `transfer-legs.ts` / `*.test.ts`
+  from the no-Solidity vault (they live on the abandoned `feat/vault-nav` branch — do not merge
+  it). Drop `fastify`, `@fastify/cors` from deps and the `api` script.
+KEEP / REUSE:
+- `src/config.ts` (env), `src/hedera/client.ts` + `keys.ts` (SDK client + ECDSA key parsing —
+  needed for setup ops the EVM can't do, e.g. operator auto-association), `src/deployments.ts`
+  (persist addresses), `scripts/resolve-operator.ts`, and all meta (README, SPEC, docs,
+  CONTRIBUTING, .env, .gitignore).
+ADD:
+- `contracts/WaferVault.sol`, `hardhat.config.ts`, Hardhat + `@hiero-ledger/hiero-contracts@0.1.2`
+  + viem; `scripts/deploy.ts`, `scripts/saucerswap.ts`, `scripts/demo.ts`; `web/` (Next.js).
+ALIGN DOCS (so no repo doc contradicts the source of truth):
+- `docs/TRACKS.md` → Hedera **Tokenization** only, smart-contract path, SaucerSwap in MVP; drop
+  the "No Solidity" track and the Privy/Arc/ENS sponsors (Hedera only now).
+- `docs/ONE-PAGER.md` → match the source-of-truth one-pager (smart contract + SaucerSwap); drop
+  any HCS / Scheduled Transactions / API mentions.
 
-Key Hedera docs (from Context.md): HTS, HCS, Scheduled Transactions, Mirror Node REST, JS SDK,
-code snippets. Use the real ones; verify SDK class signatures against the installed `@hashgraph/sdk`.
+## 4. Build the contract (SPEC §3–§4 — follow it)
 
-## 3. Environment & credentials
+- Inherit `HederaTokenService, KeyHelper, ExpiryHelper, FeeHelper`. Vault = treasury + SUPPLY +
+  KYC + FREEZE key (`KeyValueType.CONTRACT_ID`). Functions: `setUsdc`, `createPool` (**payable**),
+  `financeClaim`, `deposit`, `redeem`, `settleRewards`, `markDefault`, `navPerShare` view; events
+  `Deposit/Redeem/ClaimFinanced/RewardRouted/Default`; `poolCount`/`pools(i)`/`shareBalanceOf` views.
+- Pool-share: fungible, **6 dp**, INFINITE supply, 0.10% fractional fee (collector = vault, all
+  collectors exempt). Claim NFT collection held by the vault. Mock-USDC: fungible 6 dp the vault
+  creates (real USDC `0.0.429274` is a config swap).
+- **Check `responseCode == 22` and revert** on every HTS call (or use `SafeHTS`). Token-create
+  funcs are `payable`; deploy script attaches ~60 HBAR + `gasLimit` 10M. Money = integer 6-dp
+  micro-units. NAV = `totalShares==0 ? 1e6 : totalAssets*1e6/totalShares`.
+- **deposit** pulls USDC via `transferFrom` (investor must `approve` first) and grants the
+  investor KYC; **association + KYC ordering** is the #1 footgun (associate → grantKyc → transfer).
 
-`.env` already holds a **real, funded testnet operator** (`OPERATOR_KEY`, raw-hex **ECDSA**) and
-**real USDC** (`USDC_TOKEN_ID=0.0.429274`).
+## 5. SaucerSwap (SPEC §5)
 
-- Parse the operator key with `PrivateKey.fromStringECDSA()`. Make key parsing robust (fall back to ED25519/DER if ECDSA fails) in `src/hedera/client.ts`.
-- **Resolve `OPERATOR_ID` if blank**: derive the EVM address (`PrivateKey.fromStringECDSA(key).publicKey.toEvmAddress()`), GET `${MIRROR_NODE_URL}/accounts/0x{evmAddress}`, use `account` from the response; write it back to `.env`. **Already resolved: `OPERATOR_ID=0.0.9221779`** (`scripts/resolve-operator.ts`). Fail loudly only if the account can't be reached or has no HBAR.
-- **Settlement asset (USDC)**: the operator currently holds **~10 ℏ but NO USDC** (token `0.0.429274` not associated, balance 0). So at bootstrap: **if** the operator has real Circle USDC associated with a positive balance, use `0.0.429274`; **otherwise create a mock-USDC HTS token** (6 dp, operator = treasury, mint a working supply, symbol e.g. `mUSDC`) and use it as the settlement asset, writing its id to `USDC_TOKEN_ID`. Same code path either way — only the token id differs. State clearly in `RUN-REPORT.md` which was used. Do NOT use an interactive faucet. HBAR is limited (~10 ℏ): keep fees small, no large loops; if a step fails with `INSUFFICIENT_PAYER_BALANCE`, stop and record it.
-- **NEVER** commit `.env` or print `OPERATOR_KEY` / `DEMO_INVESTOR_KEY` to logs, commits, or `RUN-REPORT.md`. Public token/topic/account **ids** are fine to commit (`deployments/testnet.json`).
+V1 RouterV3 `0.0.19264` (EVM `0x0000000000000000000000000000000000004b40`), Factory `0.0.9959`.
+`addLiquidityNewPool` is **payable** — fee = `factory.pairCreateFee()` (tinycent) → tinybar via
+Mirror `/network/exchangerate` → `msg.value`. Prereqs: associate both tokens, +1 auto-assoc for
+the LP token, `approve` RouterV3 (HIP-376 facade). Then a sample `swapExactTokensForTokens`.
 
-## 4. Scope tonight
+## 6. Frontend (SPEC §6)
 
-IN (build fully, wired together):
-- **Backend — the full core vault** (SPEC §3–§8): HTS pool-share token (6 dp, infinite supply, supply/KYC/freeze/admin keys, low fractional fee, exempt treasury); reward-claim NFT collection (metadata pointer ≤100 B, mutable status tracked via HCS); USDC treasury; atomic `TransferTransaction` deposit / redeem / advance / reward-sweep; KYC associate+grant flow; amortized-cost NAV engine; HCS topic for NAV + lifecycle events; Mirror Node read layer; Fastify API. Plus `scripts/bootstrap.ts` and `scripts/demo.ts` working live, and unit tests with a mock client.
-- **Frontend skeleton** — Next.js (App Router) + Tailwind + **shadcn/ui**, in `web/`. All screens wired to the API + Mirror Node, neutral/unstyled-but-structured theme via design tokens so a DA can be dropped in. Local dev wallet (demo investor), no Privy.
+Next.js + Tailwind + shadcn. viem `hederaTestnet` (chain 296; `nativeCurrency.decimals=18` —
+keep separate from 6-dp USDC). Dev wallet from `NEXT_PUBLIC_DEV_PRIVATE_KEY`. `lib/wafer.ts`
+(clients + typed contract calls + `ensureAssociated` via IHRC719), `lib/mirror.ts`, `lib/abi.ts`,
+`lib/format.ts`. Deposit flow: `ensureAssociated(usdc)` → `approve(vault)` →
+`ensureAssociated(share)` → `deposit`. Hollow-account guard (`devAccountReady()`). Neutral theme
+via one tokens file so a DA drops in without touching logic. Screens: Pools+NAV, Deposit, Redeem,
+Activity (decode contract logs from Mirror Node).
 
-OUT (do NOT build tonight — other tracks set aside on purpose):
-- The autonomous AI settlement agent (`src/agent/` stays a documented stub).
-- Privy / Dynamic / ENS / Arc / SaucerSwap integrations. Leave `src/agent` and Privy wiring documented only. (SaucerSwap secondary market is roadmap; redeem-at-NAV is the exit.)
-- Any Solidity / smart contract. The vault is TypeScript-SDK only.
+## 7. Workflow & guardrails
 
-## 5. Build plan (suggested — orchestrate with workflows)
+- Follow `CONTRIBUTING.md`: short-lived branches, Conventional Commits, PR + **self-review by a
+  reviewer subagent** (no human awake) + squash-merge; keep `main` green. Never force-push `main`.
+- Solidity only for the vault; **no** HCS, **no** API, **no** Privy/Arc/ENS, **no** AI agent.
+- **Never** commit `.env` or print `OPERATOR_KEY` / `NEXT_PUBLIC_DEV_PRIVATE_KEY`. Public
+  addresses → `deployments/testnet.json` (committed).
+- Don't touch anything outside this repo (vault folder is read-only reference: `Context.md`,
+  `Wafer — Pitchs Devrel.md`). Don't deploy to mainnet. Push only to `origin` (`aiden-fianso/Wafer`).
+- Pin `gas` on HTS-touching calls; verify the contract on HashScan; keep HBAR spend lean.
 
-1. **Foundation**: `pnpm install`; robust client + key/OPERATOR_ID resolution; confirm live connectivity (read operator balance via Mirror Node). Commit on `chore/foundation`.
-2. **HTS + HCS primitives** (`feat/hts-hcs`): token/NFT/topic creation, mint/burn, KYC, transfers, mirror reads — each with unit tests against a mock client.
-3. **Vault service + NAV** (`feat/vault-nav`): deposit, redeem, financeClaim, settleRewards, markDefault; NAV engine + tests.
-4. **Bootstrap + live demo** (`feat/live-demo`): `bootstrap.ts` (idempotent, persists ids), demo investor provisioning, `demo.ts` live; capture HashScan links.
-5. **API** (`feat/api`): wire all endpoints to the vault service; a dev-mode that signs as the demo investor so the front needs no external wallet.
-6. **Frontend skeleton** (`feat/web-skeleton`): Next.js + Tailwind + shadcn; pages/components wired to the API + Mirror Node; neutral theme via tokens; a `lib/api.ts` typed client and a `lib/mirror.ts` for live NAV/TVL/activity.
-7. **Harden + verify** (`chore/verify`): full typecheck, tests, a fresh live `bootstrap` + `demo`, front build; write `RUN-REPORT.md`; tag `demo-r0`.
+## 8. Morning handoff (write into README + RUN-REPORT)
 
-Each phase: branch → conventional commits → push → open a PR → **self-review with a reviewer
-subagent** (no human is awake) → squash-merge → keep `main` green. Use `--force-with-lease` only
-on your own branches; never force-push `main`.
+- **Test the flow**: `pnpm install` → `pnpm deploy` (or reuse `deployments/testnet.json`) →
+  `pnpm demo` (NAV rises live) → `cd web && pnpm dev`, deposit/redeem in the UI, watch NAV +
+  activity. SaucerSwap swap if the pool was seeded.
+- **Pick a DA**: point to the single tokens file + the wired screens — restyle only.
+- `RUN-REPORT.md`: vault address + HashScan link, token/pool ids, demo tx links, what passed,
+  and any blocker (esp. HBAR / SaucerSwap) with the exact one human action needed.
 
-## 6. Quality bar / guardrails
+## 9. If blocked
 
-- Follow `SPEC.md` exactly; if you deviate, note why in `RUN-REPORT.md`.
-- Money is integer micro-units (6 dp) everywhere — no floats for value.
-- Adversarially verify the NAV math and the atomic-transfer leg signs (a wrong sign drains the vault in the demo). Add tests that would catch it.
-- Frontend must be **design-agnostic**: semantic structure + shadcn components + a single tokens file (colors/spacing/radius) so the morning DA is a re-theme, not a rewrite. No hardcoded brand visuals.
-- Keep it runnable from a clean clone: document every env var; `pnpm install && pnpm bootstrap && pnpm demo && pnpm --filter web dev` must work with only `.env` filled.
-- Don't touch anything outside this repo (except read-only reference to the vault folder). Don't open external services, don't deploy to mainnet, don't push to any repo other than `origin` (`aiden-fianso/Wafer`).
-
-## 7. Morning handoff (write this into README)
-
-- **Test the flow**: `cp .env`… (already set) → `pnpm install` → `pnpm bootstrap` (or reuse `deployments/testnet.json`) → `pnpm demo` (watch NAV rise on testnet) → `pnpm api` + `pnpm --filter web dev`, open the app, deposit/redeem as the demo investor, watch NAV + activity update live.
-- **Pick a DA**: point to the single tokens file + the shadcn theme entry; list the screens already wired so the user only restyles. Note where Privy would later replace the dev wallet (one provider + the HTS-association bootstrap, already documented).
-
-## 8. If blocked
-
-If a Done item is genuinely impossible autonomously (e.g., `OPERATOR_ID` can't be resolved and
-no account id is set, or the account is unfunded), do NOT fake it: implement everything else,
-make the live-dependent parts pass against the **mock client**, and record the exact blocker +
-the one human action needed in `RUN-REPORT.md`. Never invent transaction results or HashScan links.
+If HBAR is insufficient or a live step is impossible autonomously: implement + compile +
+unit-test everything, deploy as far as HBAR allows, make the rest pass against Hardhat
+local/unit where feasible, and record the exact blocker + the one human action in
+`RUN-REPORT.md`. Never invent transaction results or HashScan links.
