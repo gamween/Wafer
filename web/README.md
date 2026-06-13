@@ -1,4 +1,4 @@
-# Sluice frontend (Privy + Hedera EVM)
+# Wafer frontend (Privy + Hedera EVM)
 
 Investor-facing dApp. Scaffolded separately to keep the backend install light. Build it here
 during the 24–36h window (see `docs/TRACKS.md` for the Privy strategy).
