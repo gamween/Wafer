@@ -57,7 +57,8 @@ scripts/
   deploy.ts                deploy vault, create GPU-A pool (~100 HBAR), persist ids + verify hint
   smoke.ts                 full lifecycle LIVE: finance → deposit → settle (NAV↑) → redeem, with links
   resolve-operator.ts      derive OPERATOR_ID from the key (Mirror Node)
-test/hbar-units.test.ts    pure-logic NAV/tinybar unit tests (hardhat + chai), `pnpm test`
+test/vault-accounting.test.ts   pure-logic NAV/amortized-cost mirror (incl. queue-NAV netting), `pnpm test`
+test/vault-statemachine.test.ts pure-logic access/timelock/KYC/pause/secondary-ordering mirror
 web/                       Vite + React + viem — HBAR-wired; mock mode until VITE_VAULT_ADDRESS is set
 deployments/testnet.json   committed: vault + token + pool ids + HashScan/Sourcify links
 docs/ONE-PAGER.md · docs/TRACKS.md · SPEC.md · CONTRIBUTING.md
@@ -94,6 +95,21 @@ redeems at NAV. The current `deployments/testnet.json` records the live vault, t
 `web/` is now HBAR-wired (deposit is native-HBAR `payable`, 8-dp tinybar accounting, ABI matched to
 the deployed contract). Set `VITE_VAULT_ADDRESS` to the deployed vault and the app reads NAV/pools/
 balances from the contract and the activity feed from the Mirror Node.
+
+### Test coverage — what `pnpm test` does and does NOT prove
+
+`pnpm test` is a **pure-logic mirror**, not on-chain bytecode coverage. Every money path in
+`WaferVault.sol` calls the Hedera HTS system contract at `0x167` (mint/burn/transfer/grant-KYC/
+freeze/wipe), which has no local Hardhat EVM implementation, and this install has no
+`ethers`/`hardhat-ethers` reachable from the test process — so the contract cannot be deployed and
+called locally. The tests therefore re-implement the contract's exact integer arithmetic and
+permissioning in BigInt (annotated `// CONTRACT:` per source line) and assert it against every SPEC
+§5.3 worked example and §5.2 invariant — including the queue-NAV netting fix. **If the Solidity math
+drifts from the mirror, the mirror cannot catch it**; the deployed-bytecode paths (HTS round-trips,
+fee-exemption, KYC gating, device escrow/return, claim-NFT burn, secondary-market create) are proven
+**LIVE on testnet by `pnpm run smoke`** (RUN A repaid + RUN B default, reading on-chain `navPerShare`
+with HashScan links). Treat a green `pnpm test` as "the arithmetic is correct" and a green
+`pnpm run smoke` as "the deployed contract executes it correctly" — you need both.
 
 ## License
 

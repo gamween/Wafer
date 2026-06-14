@@ -124,3 +124,50 @@ export function timeAgo(seconds) {
   if (s < 86_400) return `${Math.floor(s / 3600)}h ago`;
   return `${Math.floor(s / 86_400)}d ago`;
 }
+
+const SECONDS_PER_YEAR = 365 * 24 * 60 * 60;
+
+// Human term, e.g. 7_776_000n → "90d". Accepts bigint | number | null.
+export function formatTerm(termSeconds) {
+  if (termSeconds == null) return MISSING;
+  const s = Number(termSeconds);
+  if (!Number.isFinite(s) || s <= 0) return MISSING;
+  if (s < 3600) return `${Math.round(s / 60)}m`;
+  if (s < 86_400) return `${Math.round(s / 3600)}h`;
+  return `${Math.round(s / 86_400)}d`;
+}
+
+// Per-deal annualized return implied by advance/expected/term:
+//   APR = (expected/advance - 1) * (year / term)
+// All inputs are 8-dp tinybar bigints; term is seconds. Returns a ratio (0.11 =
+// 11%) as a JS number, or null when inputs are unusable.
+export function dealApr(advanceUnits, expectedUnits, termSeconds) {
+  try {
+    const adv = Number(BigInt(advanceUnits ?? 0n));
+    const exp = Number(BigInt(expectedUnits ?? 0n));
+    const term = Number(BigInt(termSeconds ?? 0n));
+    if (adv <= 0 || term <= 0 || exp <= adv) return null;
+    return (exp / adv - 1) * (SECONDS_PER_YEAR / term);
+  } catch {
+    return null;
+  }
+}
+
+// Fraction repaid on a claim (settled / expected), clamped to [0,1]. For the
+// progress bar on operator/admin claim rows.
+export function settledFraction(settledUnits, expectedUnits) {
+  try {
+    const settled = Number(BigInt(settledUnits ?? 0n));
+    const expected = Number(BigInt(expectedUnits ?? 0n));
+    if (expected <= 0) return 0;
+    return Math.max(0, Math.min(1, settled / expected));
+  } catch {
+    return 0;
+  }
+}
+
+// Short bytes32 hash for display (e.g. detailsHash on a deal row).
+export function shortHash(h) {
+  if (!h || typeof h !== "string") return MISSING;
+  return h.length > 14 ? `${h.slice(0, 8)}…${h.slice(-4)}` : h;
+}

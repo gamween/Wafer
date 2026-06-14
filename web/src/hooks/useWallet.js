@@ -18,6 +18,23 @@ const PUBLIC_READ_TRANSPORT = http(RPC_URL, { retryCount: 3 });
 
 const CHAIN_HEX = `0x${CHAIN_ID.toString(16)}`;
 
+// Session flag: set on explicit Disconnect so the silent auto-reconnect effect
+// (which calls eth_accounts on mount) does NOT immediately re-attach the wallet.
+// Cleared on an explicit connect. Without this, "Disconnect" appears to do
+// nothing because the dapp re-reads the still-authorized account next tick.
+const DISCONNECT_FLAG = "wafer.disconnected";
+function isDisconnected() {
+  try { return typeof localStorage !== "undefined" && localStorage.getItem(DISCONNECT_FLAG) === "1"; }
+  catch { return false; }
+}
+function setDisconnected(v) {
+  try {
+    if (typeof localStorage === "undefined") return;
+    if (v) localStorage.setItem(DISCONNECT_FLAG, "1");
+    else localStorage.removeItem(DISCONNECT_FLAG);
+  } catch { /* ignore */ }
+}
+
 async function switchOrAddChain(eth) {
   try {
     await eth.request({
@@ -53,6 +70,9 @@ export function useWallet() {
   // Synchronous guard so auto-reconnect (mount useEffect) and an explicit
   // Connect click can't both build clients in parallel.
   const connectingRef = useRef(false);
+  // The currently-connected EIP-1193 provider, kept in a ref so disconnect can
+  // revoke its permissions even after React state is cleared.
+  const providerRef = useRef(null);
 
   const connect = useCallback(async (selectedProvider) => {
     const eth = selectedProvider || (typeof window !== "undefined" ? window.ethereum : null);
@@ -61,6 +81,9 @@ export function useWallet() {
 
     connectingRef.current = true;
     setConnecting(true);
+    // An explicit connect always clears the disconnected flag so auto-reconnect
+    // works on the next mount.
+    setDisconnected(false);
     try {
       try {
         await eth.request({
@@ -88,6 +111,7 @@ export function useWallet() {
         transport: PUBLIC_READ_TRANSPORT,
       });
 
+      providerRef.current = eth;
       setProvider(eth);
       setAccount(accounts[0]);
       setWalletClient(wc);
@@ -100,6 +124,17 @@ export function useWallet() {
   }, []);
 
   const disconnect = useCallback(() => {
+    // Persist intent so the silent auto-reconnect effect won't immediately
+    // re-attach the still-authorized account.
+    setDisconnected(true);
+    // Revoke the dapp's account permission so the NEXT connect re-prompts the
+    // wallet's account picker instead of silently returning the same account
+    // (EIP-2255; best-effort — not every wallet implements wallet_revokePermissions).
+    const eth = providerRef.current;
+    if (eth?.request) {
+      eth.request({ method: "wallet_revokePermissions", params: [{ eth_accounts: {} }] }).catch(() => {});
+    }
+    providerRef.current = null;
     setAccount(null);
     setWalletClient(null);
     setPublicClient(null);
@@ -119,6 +154,8 @@ export function useWallet() {
   useEffect(() => {
     if (account) return;
     if (connectingRef.current) return;
+    // Respect an explicit prior Disconnect — don't silently re-attach.
+    if (isDisconnected()) return;
     const eth = typeof window !== "undefined" ? window.ethereum : null;
     if (!eth) return;
     let cancelled = false;
@@ -141,6 +178,7 @@ export function useWallet() {
         });
         if (cancelled) return;
 
+        providerRef.current = eth;
         setProvider(eth);
         setAccount(accounts[0]);
         setWalletClient(wc);

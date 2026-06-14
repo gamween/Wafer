@@ -10,12 +10,12 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@number-flow/react": "^0.6.0",
-    "globe.gl": "^2.45.3",
-    "motion": "^12.38.0",
+    "@react-three/drei": "^10.7.7",
+    "@react-three/fiber": "^9.6.1",
+    "gsap": "^3.15.0",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
-    "three": "^0.183.2",
+    "three": "^0.184.0",
     "viem": "^2.47.0"
   },
   "devDependencies": {

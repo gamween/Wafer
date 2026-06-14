@@ -32,8 +32,15 @@ export function formatError(err) {
 
   if (/user (rejected|denied|cancelled)/i.test(msg)) return "Transaction cancelled.";
   if (/insufficient funds|insufficient_payer_balance|not enough hbar/i.test(msg)) return "Not enough HBAR for gas — fund your account from the Hedera testnet faucet (portal.hedera.com).";
-  if (/token_not_associated|not associated|associate/i.test(msg)) return "Token not associated — associate the token to your account first, then retry.";
-  if (/account_kyc_not_granted|kyc/i.test(msg)) return "KYC not granted yet — the vault grants KYC on your first deposit. Retry in a moment.";
+  if (/NOT_KYCED|account_kyc_not_granted|not\s*kyc'?d|kyc\s*not\s*granted/i.test(msg)) return "KYC not granted — an admin must allowlist your address for this pool (adminGrantKyc) before you can deposit.";
+  if (/token_not_associated|not associated|associate/i.test(msg)) return "Token not associated — associate the share token to your account first, then retry.";
+  if (/NOT_OPERATOR/i.test(msg)) return "Not a whitelisted operator — an admin must registerOperator your address first.";
+  if (/NOT_SETTLER|claim\s*settler/i.test(msg)) return "Not authorized to settle this claim — ask the admin to setAuthorizedSettler for your address.";
+  if (/TIMELOCK|pending\s*after|execute\s*after/i.test(msg)) return "Timelocked action — it was queued. Re-run after the timelock window elapses to execute it.";
+  if (/INSUFFICIENT_IDLE|idle\s*<\s*advance|NO_LIQUID/i.test(msg)) return "Not enough idle liquidity in the pool for this action right now.";
+  if (/POOL_PAUSED|paused/i.test(msg)) return "Pool is paused — admin must unpause it before this action.";
+  if (/FROZEN|account_frozen/i.test(msg)) return "Account is frozen for this pool — contact the admin.";
+  if (/VALUE_TOO_LARGE/i.test(msg)) return "Amount too large — exceeds the uint64 tinybar ceiling.";
   if (/wallet not connected/i.test(msg)) return "Wallet not connected — click Connect first.";
   if (/wallet is still initializing/i.test(msg)) return "Wallet initializing — wait a second and retry.";
   if (/MetaMask account changed/i.test(msg)) return "MetaMask account changed — refresh and reconnect.";

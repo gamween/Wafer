@@ -4,8 +4,17 @@
 // (tinybar / share micro-units), matching the WaferVault contract. Settlement is
 // native HBAR — there is no ERC-20 settlement token. HBAR is 18 decimals EVM-side
 // (weibar) for msg.value / gas; that boundary is handled in useContracts.js.
+//
+// NO mock mode at ship — the app reads live from the deployed VAULT_ADDRESS and
+// degrades gracefully (empty lists, "—") when an address is unset or a read fails.
+//
+// ADDRESS AUTO-SYNC: every contract address below is sourced from the repo-root
+// deployments/testnet.json (imported at build time — Vite/Rollup supports JSON
+// import). A future redeploy that rewrites that file auto-propagates here with no
+// code change. VITE_VAULT_ADDRESS (and the other VITE_* vars) still override.
+import deployment from "../../../deployments/testnet.json";
 
-export const CHAIN_ID = 296;
+export const CHAIN_ID = deployment?.chainId ?? 296;
 export const CHAIN_NAME = "Hedera Testnet";
 
 // Public Hedera EVM relay (JSON-RPC) and Mirror Node REST base.
@@ -17,82 +26,91 @@ export const EXPLORER_URL = "https://hashscan.io/testnet";
 
 export const NATIVE_CURRENCY = { name: "HBAR", symbol: "HBAR", decimals: 18 };
 
-const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
+export const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
 
-// Live deployment — Hedera testnet (deployments/testnet.json). The vault is
-// deployed + verified on HashScan, so these are the defaults; MOCK_MODE flips
-// OFF automatically. A `.env` (VITE_VAULT_ADDRESS / VITE_SHARE_TOKEN) override
-// wins for pointing the app at a different deploy.
-const DEFAULT_VAULT_ADDRESS = "0xc452D23791F9fC0c43B82E298b337B0A3525cd0A";
-// Pool 0 (GPU-A) share token EVM address (Hedera 0.0.9225585, 8 dp).
-const DEFAULT_SHARE_TOKEN = "0x00000000000000000000000000000000008CC571";
+// ---- Canonical deployment (deployments/testnet.json) ----
+// Read straight from the deployment record so the front never drifts from chain.
+const dep = deployment ?? {};
+const pool0 = dep.pool ?? {};
+const mocks = dep.mocks ?? {};
+const secondary = dep.secondary ?? {};
+const pairs = dep.secondaryPair ?? {};
+
+function norm(addr, fallback) {
+  const v = (addr || fallback || "").trim();
+  return v ? v.toLowerCase() : "";
+}
 
 export const ADDRESSES = {
-  // WaferVault EVM address. Defaults to the live testnet deploy; override with
-  // VITE_VAULT_ADDRESS, or set the zero address to force MOCK_MODE.
-  vault: (import.meta.env.VITE_VAULT_ADDRESS || DEFAULT_VAULT_ADDRESS).toLowerCase(),
-
-  // Per-pool share token is normally read from the contract's
-  // pools(poolId).shareToken view; this default is pool 0's share token, used by
-  // the association step / Mirror reads when a pool's address isn't loaded yet.
-  shareToken: (import.meta.env.VITE_SHARE_TOKEN || DEFAULT_SHARE_TOKEN).toLowerCase(),
+  // WaferVault EVM address — from deployments.json (vaultAddress); override with
+  // VITE_VAULT_ADDRESS. Empty/unset = the app degrades to read-only "—".
+  vault: norm(import.meta.env.VITE_VAULT_ADDRESS, dep.vaultAddress),
+  // Default per-pool share token (pool 0). Normally read from pools(id).shareToken;
+  // this is only the pre-read fallback. From pool.shareTokenEvm.
+  shareToken: norm(import.meta.env.VITE_SHARE_TOKEN, pool0.shareTokenEvm),
+  // Pool 0 claim NFT collection (the receipts). From pool.claimNftEvm.
+  claimNft: norm(import.meta.env.VITE_CLAIM_NFT, pool0.claimNftEvm),
+  // MockDeviceNFT collateral helper (operator portal escrow flow) + its collection.
+  deviceNft: norm(import.meta.env.VITE_DEVICE_NFT, mocks.deviceNft?.evm),
+  deviceCollection: norm(import.meta.env.VITE_DEVICE_COLLECTION, mocks.deviceNft?.collectionEvm),
+  // MockRewardSource demo keeper.
+  rewardSource: norm(import.meta.env.VITE_REWARD_SOURCE, mocks.rewardSource?.evm),
+  // SaucerSwap V1 testnet (SPEC §10) — RouterV3, Factory, WHBAR token.
+  saucerRouter: norm(import.meta.env.VITE_SAUCER_ROUTER, secondary.router),
+  saucerFactory: norm(import.meta.env.VITE_SAUCER_FACTORY, secondary.factory),
+  whbar: norm(import.meta.env.VITE_WHBAR, secondary.whbar),
 };
 
-// Mock mode: when the vault address is the zero address the contract isn't
-// wired — the UI renders from placeholder data so a designer can work on the
-// shell. With the live default above it is OFF; set VITE_VAULT_ADDRESS=0x0…0 to
-// force it back on.
-export const MOCK_MODE = ADDRESSES.vault === ZERO_ADDRESS;
+// Per-pool live secondary-market pair addresses from deployments.json
+// (secondaryPair[poolId].pair). These are the KYC-enabled, liquidity-seeded
+// SaucerSwap V1 share/WHBAR pairs created via the admin enable-secondary flow.
+// The vault's secondaryPair(poolId) view is still the runtime source of truth;
+// this is the deploy-recorded fallback (and the seed for the Secondary screen).
+export const SECONDARY_PAIRS = Object.fromEntries(
+  Object.entries(pairs).map(([poolId, rec]) => [Number(poolId), norm(rec?.pair)]),
+);
 
-// Display metadata per pool (and full placeholder rows for mock mode). Live, the
-// numeric fields (navPerShare / totalAssets / totalShares) are read from the
-// contract and ONLY the name / network / risk / logo labels are reused (those
-// aren't on-chain). poolId matches the contract's pools(uint32) index — pool 0
-// is the live GPU-A pool (deployments/testnet.json). All amounts are 8-dp units
-// (tinybar); mock values give a realistic NAV > 1.00.
-export const MOCK_POOLS = [
-  {
-    poolId: 0,
-    name: "GPU-A",
-    network: "GPU / Compute",
-    risk: "A",
-    networkLogo: "/logos/hedera.svg",
-    navPerShare: 104_200_000n, // 1.042 HBAR / share
-    totalAssets: 18_450_000_000_000n, // 184,500 HBAR
-    totalShares: 17_706_334_000_000n,
-    status: 0, // Active
-  },
-  {
-    poolId: 1,
-    name: "WIFI-B",
-    network: "Wireless",
-    risk: "B",
-    networkLogo: "/logos/hedera.svg",
-    navPerShare: 101_850_000n, // 1.0185 HBAR / share
-    totalAssets: 6_230_000_000_000n, // 62,300 HBAR
-    totalShares: 6_116_838_300_000n,
-    status: 0, // Active
-  },
-  {
-    poolId: 2,
-    name: "ENERGY-A",
-    network: "Energy",
-    risk: "A",
-    networkLogo: "/logos/hedera.svg",
-    navPerShare: 100_790_000n, // 1.0079 HBAR / share
-    totalAssets: 2_890_000_000_000n, // 28,900 HBAR
-    totalShares: 2_867_347_900_000n,
-    status: 0, // Active
-  },
-];
+// Convenience: the recorded pair for a pool (lower-cased, "" if none recorded).
+export function recordedPair(poolId) {
+  return SECONDARY_PAIRS[Number(poolId)] || "";
+}
 
-// Placeholder activity feed (mock mode). Once the vault is deployed, Activity
-// reads real events from the Mirror Node — see lib/mirror.js. Amounts are 8-dp
-// units (tinybar).
-export const MOCK_ACTIVITY = [
-  { type: "Deposit", poolId: 0, account: "0x00000000000000000000000000000000004f1a2b", assets: 500_000_000_000n, shares: 479_846_400_000n, ageSeconds: 90 },
-  { type: "RewardRouted", poolId: 0, claimId: 3, assets: 120_000_000_000n, ageSeconds: 640 },
-  { type: "Redeem", poolId: 1, account: "0x0000000000000000000000000000000000a3c918", assets: 250_000_000_000n, shares: 245_450_000_000n, ageSeconds: 1820 },
-  { type: "ClaimFinanced", poolId: 0, claimId: 4, assets: 900_000_000_000n, ageSeconds: 5400 },
-  { type: "Default", poolId: 2, claimId: 1, assets: 40_000_000_000n, ageSeconds: 86_400 },
-];
+// True when the app has a live vault address to talk to. When false, screens show
+// a "configure VITE_VAULT_ADDRESS" notice instead of throwing.
+export const VAULT_CONFIGURED = !!ADDRESSES.vault && ADDRESSES.vault !== ZERO_ADDRESS;
+
+// ---- Taxonomy (matches the on-chain enums in WaferVault.sol) ----
+// enum Category { GPU, Wireless, Mapping, Energy, Storage }
+export const CATEGORIES = ["GPU", "Wireless", "Mapping", "Energy", "Storage"];
+export const CATEGORY_LABEL = {
+  0: "GPU / Compute",
+  1: "Wireless",
+  2: "Mapping",
+  3: "Energy",
+  4: "Storage",
+};
+// enum RiskClass { A, B, C }
+export const RISK_CLASSES = ["A", "B", "C"];
+// enum DealStatus { Proposed, Approved, Rejected, Financed, Repaid, Defaulted }
+export const DEAL_STATUS = ["Proposed", "Approved", "Rejected", "Financed", "Repaid", "Defaulted"];
+// enum ClaimStatus { Active, Repaid, Defaulted }
+export const CLAIM_STATUS = ["Active", "Repaid", "Defaulted"];
+// enum PoolStatus { Active, Paused }
+export const POOL_STATUS = ["Active", "Paused"];
+
+// Per-pool display logo (category → asset). On-chain category drives the rest.
+export const CATEGORY_LOGO = {
+  0: "/logos/hedera.svg",
+  1: "/logos/hedera.svg",
+  2: "/logos/globe.svg",
+  3: "/logos/hedera.svg",
+  4: "/logos/hedera.svg",
+};
+
+// Build a conventional pool display name from category + class (e.g. "GPU-A").
+export function poolDisplayName(categoryIdx, classIdx) {
+  const cat = CATEGORIES[categoryIdx] ?? `CAT${categoryIdx}`;
+  const cls = RISK_CLASSES[classIdx] ?? `${classIdx}`;
+  const short = cat === "Wireless" ? "WIFI" : cat.toUpperCase();
+  return `${short}-${cls}`;
+}

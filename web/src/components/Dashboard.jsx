@@ -1,12 +1,14 @@
 import React, { useEffect, useState } from "react";
-import { MOCK_MODE } from "../lib/config.js";
+import { VAULT_CONFIGURED, poolDisplayName, CATEGORY_LABEL } from "../lib/config.js";
 import { formatHbar, formatNav, assetsForShares } from "../lib/format.js";
 
-// Dashboard: the connected wallet's pool-share balances + their HBAR value at
-// current NAV. Placeholder (zeroes) until the vault is deployed.
-export default function Dashboard({ contracts, refreshKey }) {
+// Dashboard: the connected wallet's pool-share positions + HBAR value at current
+// NAV, plus a count of pending redemption requests. Reads share balances from
+// each pool's share-token ERC-20 facade (no vault aggregate view).
+export default function Dashboard({ contracts, account, refreshKey }) {
   const [rows, setRows] = useState([]);
   const [hbarBalance, setHbarBalance] = useState(null);
+  const [pendingRedemptions, setPendingRedemptions] = useState(0);
 
   useEffect(() => {
     if (!contracts) return;
@@ -14,32 +16,43 @@ export default function Dashboard({ contracts, refreshKey }) {
     (async () => {
       try {
         const pools = await contracts.getPools();
-        const [balances, hbar] = await Promise.all([
-          Promise.all(pools.map((p) => contracts.getShareBalance(p.poolId))),
+        const [balances, hbar, queue] = await Promise.all([
+          Promise.all(pools.map((p) => contracts.getShareBalance(p.shareToken))),
           contracts.getHbarBalance(),
+          contracts.getRedemptionQueue(),
         ]);
         if (cancelled) return;
         const next = pools.map((p, i) => {
           const shares = balances[i] ?? 0n;
           const value = assetsForShares(shares, p.navPerShare);
-          return { poolId: p.poolId, name: p.name, network: p.network, navPerShare: p.navPerShare, shares, value };
+          return {
+            poolId: p.poolId,
+            name: poolDisplayName(p.category, p.class),
+            network: CATEGORY_LABEL[p.category] ?? "—",
+            navPerShare: p.navPerShare,
+            shares,
+            value,
+          };
         });
-        setRows(next);
+        setRows(next.filter((r) => r.shares > 0n).length ? next : next);
         setHbarBalance(hbar);
+        if (account) {
+          setPendingRedemptions(queue.filter((r) => !r.filled && r.investor?.toLowerCase?.() === account.toLowerCase()).length);
+        }
       } catch {
         // leave previous
       }
     })();
     return () => { cancelled = true; };
-  }, [contracts, refreshKey]);
+  }, [contracts, account, refreshKey]);
 
   const totalValue = rows.reduce((acc, r) => acc + (r.value ?? 0n), 0n);
 
   return (
     <div>
-      {MOCK_MODE && (
+      {!VAULT_CONFIGURED && (
         <div className="net-warning" role="status" style={{ marginBottom: "1rem" }}>
-          <span>Demo mode — your live positions appear here once WaferVault is deployed and you deposit.</span>
+          <span>No vault configured — set VITE_VAULT_ADDRESS to a deployed WaferVault to see live positions.</span>
         </div>
       )}
 
@@ -53,6 +66,10 @@ export default function Dashboard({ contracts, refreshKey }) {
           <div className="balance-item">
             <div className="balance-label"><img src="/logos/hedera.svg" alt="HBAR" className="balance-icon" /> HBAR balance</div>
             <div className="balance-value">{hbarBalance == null ? "—" : formatHbar(hbarBalance)}</div>
+          </div>
+          <div className="balance-item">
+            <div className="balance-label">Pending redemptions</div>
+            <div className="balance-value">{pendingRedemptions}</div>
           </div>
         </div>
       </div>
@@ -70,7 +87,7 @@ export default function Dashboard({ contracts, refreshKey }) {
               </tr>
             </thead>
             <tbody>
-              {rows.map((r) => (
+              {rows.filter((r) => r.shares > 0n).map((r) => (
                 <tr key={r.poolId} className="mt-row" style={{ cursor: "default" }}>
                   <td>
                     <div className="mt-cell">
@@ -83,6 +100,9 @@ export default function Dashboard({ contracts, refreshKey }) {
                   <td><div className="mt-cell"><span className="mt-amount">{formatHbar(r.value)} HBAR</span></div></td>
                 </tr>
               ))}
+              {rows.filter((r) => r.shares > 0n).length === 0 && (
+                <tr><td colSpan={4}><div className="mt-cell" style={{ padding: "1.5rem", opacity: 0.6 }}>No positions yet — deposit into a pool to mint shares.</div></td></tr>
+              )}
             </tbody>
           </table>
         </div>

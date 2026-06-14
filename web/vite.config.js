@@ -10,4 +10,10 @@ export default defineConfig({
   define: {
     global: "globalThis",
   },
+  server: {
+    fs: {
+      // Allow importing the repo-root deployments/testnet.json (one level above web/).
+      allow: [".."],
+    },
+  },
 });
