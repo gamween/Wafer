@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import {
-  CATEGORIES, CATEGORY_LABEL, DEAL_STATUS, CLAIM_STATUS,
+  CATEGORIES, CATEGORY_LABEL, CATEGORY_LOGO, DEAL_STATUS, CLAIM_STATUS,
   ADDRESSES, poolDisplayName,
 } from "../lib/config.js";
 import {
@@ -8,6 +8,8 @@ import {
   settledFraction,
 } from "../lib/format.js";
 import { formatError } from "../lib/errors.js";
+import StatefulButton from "./ui/StatefulButton.jsx";
+import FileUpload from "./ui/FileUpload.jsx";
 
 const DAY = 86_400;
 
@@ -25,6 +27,7 @@ export default function OperatorPortal({ contracts, account, onStatus, refreshKe
     company: "", description: "", category: 0, advance: "", expected: "", termDays: "90",
   });
   const [busy, setBusy] = useState("");
+  const [illo, setIllo] = useState(null); // optional deal illustration { url, name }
   const inFlightRef = useRef(false);
 
   useEffect(() => {
@@ -50,6 +53,12 @@ export default function OperatorPortal({ contracts, account, onStatus, refreshKe
   };
 
   const setField = (k, v) => setForm((f) => ({ ...f, [k]: v }));
+  const onIllo = (files) => {
+    const f = files?.[0];
+    if (!f) return;
+    if (illo?.url) URL.revokeObjectURL(illo.url);
+    setIllo({ url: URL.createObjectURL(f), name: f.name });
+  };
 
   const advanceUnits = parseUnits8(form.advance);
   const expectedUnits = parseUnits8(form.expected);
@@ -72,6 +81,7 @@ export default function OperatorPortal({ contracts, account, onStatus, refreshKe
       onStatus(`Device-NFT serial #${serial} minted + approved for escrow.`);
     } catch (e) {
       onStatus(formatError(e), true);
+      throw e;
     } finally { inFlightRef.current = false; setBusy(""); }
   };
 
@@ -97,6 +107,7 @@ export default function OperatorPortal({ contracts, account, onStatus, refreshKe
       setDevice(null);
     } catch (e) {
       onStatus(formatError(e), true);
+      throw e;
     } finally { inFlightRef.current = false; setBusy(""); }
   };
 
@@ -115,12 +126,28 @@ export default function OperatorPortal({ contracts, account, onStatus, refreshKe
             <span>Company</span>
             <input value={form.company} onChange={(e) => setField("company", e.target.value)} placeholder="Acme GPU Co." />
           </label>
-          <label className="wafer-field">
+          <div className="wafer-field wafer-field-wide">
             <span>Category</span>
-            <select value={form.category} onChange={(e) => setField("category", Number(e.target.value))}>
-              {CATEGORIES.map((c, i) => <option key={c} value={i}>{CATEGORY_LABEL[i]}</option>)}
-            </select>
-          </label>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(104px, 1fr))", gap: "0.5rem", marginTop: "0.4rem" }}>
+              {CATEGORIES.map((c, i) => (
+                <button
+                  key={c}
+                  type="button"
+                  onClick={() => setField("category", i)}
+                  aria-pressed={form.category === i}
+                  style={{
+                    display: "flex", flexDirection: "column", alignItems: "center", gap: "0.45rem",
+                    padding: "0.8rem 0.5rem", borderRadius: 12, cursor: "pointer", color: "var(--text)",
+                    border: `1px solid ${form.category === i ? "var(--text)" : "var(--line)"}`,
+                    background: form.category === i ? "var(--surface-hi)" : "var(--surface)",
+                  }}
+                >
+                  <img src={CATEGORY_LOGO[i]} alt="" style={{ width: 30, height: 30, objectFit: "contain", borderRadius: 7 }} />
+                  <span style={{ fontSize: "0.8rem" }}>{CATEGORY_LABEL[i]}</span>
+                </button>
+              ))}
+            </div>
+          </div>
           <label className="wafer-field wafer-field-wide">
             <span>Description</span>
             <input value={form.description} onChange={(e) => setField("description", e.target.value)} placeholder="50× H100 nodes, 6-month reward stream" />
@@ -139,18 +166,23 @@ export default function OperatorPortal({ contracts, account, onStatus, refreshKe
           </label>
         </div>
 
+        <div className="wafer-field" style={{ marginTop: "0.85rem" }}>
+          <span>Illustration (optional)</span>
+          <FileUpload onChange={onIllo} preview={illo?.url} hint="Optional — the category logo is used if you don't upload one" />
+        </div>
+
         <div className="vault-summary" style={{ marginTop: "0.75rem" }}>
           <div className="vault-summary-row"><span className="vault-summary-label">Implied APR</span><span className="vault-summary-value vault-apy">{aprPreview == null ? "—" : formatPercent(aprPreview)}</span></div>
           <div className="vault-summary-row"><span className="vault-summary-label">Device collateral</span><span className="vault-summary-value">{device ? `serial #${device.serial} (escrow approved)` : "none yet"}</span></div>
         </div>
 
         <div className="wafer-form-actions">
-          <button className="btn-secondary" disabled={!roles.isOperator || busy === "mint"} onClick={mintDevice}>
-            {busy === "mint" ? "Minting…" : device ? "Re-mint device" : "Mint + escrow device-NFT"}
-          </button>
-          <button className="btn-primary" disabled={!roles.isOperator || !formValid || busy === "propose"} onClick={submitDeal}>
-            {busy === "propose" ? "Submitting…" : "Propose deal"}
-          </button>
+          <StatefulButton className="btn-secondary" disabled={!roles.isOperator} onClick={mintDevice}>
+            {device ? "Re-mint device" : "Mint + escrow device-NFT"}
+          </StatefulButton>
+          <StatefulButton className="btn-primary" disabled={!roles.isOperator || !formValid} onClick={submitDeal}>
+            Propose deal
+          </StatefulButton>
         </div>
         {expectedUnits > 0n && expectedUnits < advanceUnits && (
           <p className="wafer-detail-note" style={{ color: "var(--red)" }}>Expected repayment must be ≥ advance.</p>

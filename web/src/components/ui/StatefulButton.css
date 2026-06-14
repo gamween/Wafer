@@ -1,0 +1,45 @@
+/* Adds loading/success animation WITHOUT changing the wrapped button's look:
+   the caller's className supplies bg/shape/padding/colour; we only overlay a
+   spinner / checkmark (in currentColor) and fade the label. */
+.sb { position: relative; }
+.sb .sb-label { transition: opacity 0.18s ease; }
+.sb .sb-spinner,
+.sb .sb-check {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.18s ease;
+}
+.sb-loading .sb-label,
+.sb-success .sb-label { opacity: 0; }
+.sb-loading .sb-spinner { opacity: 1; }
+.sb-success .sb-check { opacity: 1; }
+
+.sb-spinner::before {
+  content: "";
+  width: 1.05em;
+  height: 1.05em;
+  border: 2px solid currentColor;
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: sb-spin 0.7s linear infinite;
+  opacity: 0.9;
+}
+@keyframes sb-spin { to { transform: rotate(360deg); } }
+
+.sb-check svg { width: 1.3em; height: 1.3em; }
+.sb-check path {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 24;
+  stroke-dashoffset: 24;
+}
+.sb-success .sb-check path { animation: sb-draw 0.4s ease forwards; }
+@keyframes sb-draw { to { stroke-dashoffset: 0; } }

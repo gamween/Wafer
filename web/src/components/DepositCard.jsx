@@ -5,6 +5,7 @@ import {
 } from "../lib/format.js";
 import { VAULT_CONFIGURED, poolDisplayName, CATEGORY_LABEL, CATEGORY_LOGO, RISK_CLASSES } from "../lib/config.js";
 import { formatError } from "../lib/errors.js";
+import StatefulButton from "./ui/StatefulButton.jsx";
 
 // Centered Uniswap-swap-card-style Deposit / Redeem panel — the default screen
 // after connect. Same on-chain logic as DepositWidget (deposit / redeem / associate
@@ -140,6 +141,7 @@ export default function DepositCard({ contracts, account, onStatus, refreshKey, 
       setAmount("");
     } catch (e) {
       onStatus(formatError(e), true);
+      throw e;
     } finally {
       inFlightRef.current = false;
       setIsBusy(false);
@@ -275,9 +277,9 @@ export default function DepositCard({ contracts, account, onStatus, refreshKey, 
           <div className="dc-summary-row"><span>Steps</span><span className="dc-summary-val dc-muted">{isDeposit ? "associate → deposit" : "approve → redeem"}</span></div>
         </div>
 
-        <button className="dc-action" disabled={isDisabled || (account && noPool)} onClick={handleAction} type="button">
+        <StatefulButton className="dc-action" disabled={isDisabled || (account && noPool)} onClick={handleAction}>
           {!account && connecting ? "Connecting…" : actionLabel}
-        </button>
+        </StatefulButton>
       </div>
 
       <p className="dc-foot-note">
