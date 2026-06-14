@@ -100,11 +100,11 @@ export const POOL_STATUS = ["Active", "Paused"];
 
 // Per-pool display logo (category → asset). On-chain category drives the rest.
 export const CATEGORY_LOGO = {
-  0: "/logos/hedera.svg",
-  1: "/logos/hedera.svg",
-  2: "/logos/globe.svg",
-  3: "/logos/hedera.svg",
-  4: "/logos/hedera.svg",
+  0: "/logos/gpu.png",       // GPU / Compute
+  1: "/logos/wireless.png",  // Wireless
+  2: "/logos/mapping.png",   // Mapping
+  3: "/logos/energy.png",    // Energy
+  4: "/logos/storage.png",   // Storage
 };
 
 // Build a conventional pool display name from category + class (e.g. "GPU-A").
