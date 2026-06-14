@@ -82,24 +82,11 @@ export default function TopNav({
           ))}
         </nav>
 
-        {/* Search */}
-        <div className="tn-search">
-          <svg width="16" height="16" viewBox="0 0 20 20" fill="none" aria-hidden="true">
-            <path d="M13.5 13.5L15.8333 15.8333" stroke="currentColor" strokeWidth="1.25" strokeLinecap="round" />
-            <path d="M9.35 14.54C12.22 14.54 14.54 12.22 14.54 9.35C14.54 6.49 12.22 4.17 9.35 4.17C6.49 4.17 4.17 6.49 4.17 9.35C4.17 12.22 6.49 14.54 9.35 14.54Z" stroke="currentColor" strokeWidth="1.25" strokeLinecap="round" />
-          </svg>
-          <input
-            aria-label="Search pools and deals"
-            placeholder="Search pools, deals"
-            value={search}
-            onChange={(e) => onSearchChange(e.target.value)}
-            onFocus={() => { if (activeTab === "deposit") onTabChange("explore"); }}
-          />
-        </div>
+        {/* Spacer pushes the right cluster to the edge (search bar removed). */}
+        <div style={{ flex: 1 }} />
 
         {/* Right cluster */}
         <div className="tn-right">
-          <OverflowMenu />
           {account ? (
             <AccountMenu
               account={account}

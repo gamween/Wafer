@@ -10,7 +10,7 @@ export const SPEC_URL = `${GITHUB_URL}/blob/main/SPEC.md`;
 export const ONEPAGER_URL = `${GITHUB_URL}#readme`;
 export const HEDERA_URL = "https://hedera.com";
 export const HEDERA_DOCS_URL = "https://docs.hedera.com";
-export const X_URL = "https://x.com";
+export const X_URL = "https://x.com/dvb_fianso";
 
 // Sourcify full-match record for the deployed vault (verified source), straight
 // from the deployment file; falls back to a HashScan contract link.
