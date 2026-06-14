@@ -14,14 +14,6 @@ import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 ///      HBAR-paired liquidity router (wraps HBAR->WHBAR internally); Factory exposes the create fee
 ///      and the post-create pair lookup.
 interface ISaucerRouter {
-    function addLiquidityETHNewPool(
-        address token,
-        uint256 amountTokenDesired,
-        uint256 amountTokenMin,
-        uint256 amountETHMin,
-        address to,
-        uint256 deadline
-    ) external payable returns (uint256 amountToken, uint256 amountETH, uint256 liquidity);
     function addLiquidityETH(
         address token,
         uint256 amountTokenDesired,
@@ -71,8 +63,12 @@ contract WaferVault is HederaTokenService, KeyHelper, ExpiryHelper, FeeHelper, O
     uint256 internal constant SUCCESS = uint256(int256(HederaResponseCodes.SUCCESS)); // 22
 
     int64 internal constant AUTO_RENEW_PERIOD = 7776000; // 90 days
-    int64 internal constant FEE_NUMERATOR = 10; // 0.10%
-    int64 internal constant FEE_DENOMINATOR = 10000;
+
+    // HTS token amounts are int64; the safe universal ceiling for any amount minted/transferred/burned
+    // via the precompile. Guarding `msg.value <= uint64.max` is NOT enough for DERIVED share amounts
+    // (e.g. `deposit` shares = assets*totalShares/netAssets can exceed int64.max once NAV < 1), so every
+    // value that crosses the HTS boundary as an int64 is bounded by this instead of type(uint64).max.
+    uint256 internal constant MAX_HTS_AMOUNT = uint256(uint64(type(int64).max)); // 2^63 - 1
 
     // Anti first-depositor inflation (Uniswap-V2 MINIMUM_LIQUIDITY style): at createPool the vault
     // mints DEAD_SHARES to itself AND seeds an equal DEAD_SHARES tinybar of idle cash, so genesis
@@ -118,7 +114,7 @@ contract WaferVault is HederaTokenService, KeyHelper, ExpiryHelper, FeeHelper, O
     }
 
     struct Pool {
-        address shareToken; // HTS fungible, 8dp, KYC+freeze+fee keys = vault
+        address shareToken; // HTS fungible, 8dp, supply+KYC+freeze+wipe+pause keys = vault
         address claimNft; // HTS NFT collection (the receipts), supply/wipe = vault
         Category category;
         RiskClass class;
@@ -220,6 +216,7 @@ contract WaferVault is HederaTokenService, KeyHelper, ExpiryHelper, FeeHelper, O
     event ActionQueued(bytes32 indexed actionHash, uint64 executeAfter);
     event SecondaryConfigSet(address router, address whbar, address factory);
     event SecondaryMarketEnabled(uint32 indexed poolId, address pair, uint256 shareLiquidity, uint256 hbarLiquidity);
+    event SurplusWithdrawn(address indexed to, uint256 amount);
 
     // --- modifiers -----------------------------------------------------------
     modifier onlyOperator() {
@@ -280,6 +277,22 @@ contract WaferVault is HederaTokenService, KeyHelper, ExpiryHelper, FeeHelper, O
         emit SecondaryConfigSet(router, whbar, factory);
     }
 
+    /// @notice Withdraw protocol-owned surplus HBAR — contract balance not backing any pool's idle.
+    /// @dev `createPool` over-funds the two HTS creates (the 0x167 precompile refunds the excess to
+    ///      the contract) and that surplus is otherwise unrecoverable. Surplus = balance − Σ pool idle;
+    ///      every pool's idle (the CASH leg backing live + queued shares) is preserved, so I1 holds.
+    function ownerWithdrawSurplus(address payable to) external onlyOwner nonReentrant returns (uint256 amount) {
+        require(to != address(0), "ZERO_TO");
+        uint256 backed = 0;
+        for (uint32 i = 0; i < poolCount; i++) backed += pools[i].idleTinybar;
+        uint256 bal = address(this).balance;
+        require(bal > backed, "NO_SURPLUS");
+        amount = bal - backed;
+        emit SurplusWithdrawn(to, amount);
+        (bool ok, ) = to.call{value: amount}("");
+        require(ok, "WITHDRAW_FAIL");
+    }
+
     // =========================================================================
     //                              KYC ALLOWLIST (D2)
     // =========================================================================
@@ -308,15 +321,24 @@ contract WaferVault is HederaTokenService, KeyHelper, ExpiryHelper, FeeHelper, O
     //                              COMPLIANCE (D10)
     // =========================================================================
 
+    /// @notice Pause a pool: flips the contract-level value-flow gate (deposit/redeem/claimRedemption)
+    ///         AND pauses the HTS share token itself, so ALL share transfers halt — including
+    ///         peer-to-peer and the SaucerSwap secondary (a real regulator-style freeze, D10).
     function pausePool(uint32 poolId) external onlyOwner {
-        require(pools[poolId].shareToken != address(0), "NO_POOL");
-        pools[poolId].status = PoolStatus.Paused;
+        Pool storage p = pools[poolId];
+        require(p.shareToken != address(0), "NO_POOL");
+        p.status = PoolStatus.Paused;
+        int256 rc = pauseToken(p.shareToken);
+        require(uint256(rc) == SUCCESS, "PAUSE_FAIL");
         emit Paused(poolId, true);
     }
 
     function unpausePool(uint32 poolId) external onlyOwner {
-        require(pools[poolId].shareToken != address(0), "NO_POOL");
-        pools[poolId].status = PoolStatus.Active;
+        Pool storage p = pools[poolId];
+        require(p.shareToken != address(0), "NO_POOL");
+        p.status = PoolStatus.Active;
+        int256 rc = unpauseToken(p.shareToken);
+        require(uint256(rc) == SUCCESS, "UNPAUSE_FAIL");
         emit Paused(poolId, false);
     }
 
@@ -341,9 +363,10 @@ contract WaferVault is HederaTokenService, KeyHelper, ExpiryHelper, FeeHelper, O
     // =========================================================================
 
     /**
-     * @notice Create a pool: an HTS fungible share token (with 0.10% all-collectors-exempt fee) +
-     *         an HTS claim-NFT collection. Seeds DEAD_SHARES to the vault (anti-inflation) and
-     *         self-grants the vault KYC so it can hold/transfer shares.
+     * @notice Create a pool: an HTS fungible share token (NO custom fee, D11) + an HTS claim-NFT
+     *         collection. Seeds DEAD_SHARES to the vault (anti-inflation) and self-grants the vault
+     *         KYC so it can hold/transfer shares. The share token carries supply+KYC+freeze+wipe+pause
+     *         keys (all = vault) so KYC, per-account freeze, and token-level pause are real levers (D10).
      * @dev payable — attach ~100 HBAR; the 0x167 precompile refunds create excess to the contract,
      *      so we forward the full balance to each of the two creates (create #2 sees create #1's refund).
      */
@@ -392,10 +415,14 @@ contract WaferVault is HederaTokenService, KeyHelper, ExpiryHelper, FeeHelper, O
         internal
         returns (address shareToken)
     {
-        IHederaTokenService.TokenKey[] memory keys = new IHederaTokenService.TokenKey[](3);
+        // 5 keys (all = vault contract): SUPPLY (mint/burn), KYC (allowlist), FREEZE (per-account),
+        // WIPE (clawback), PAUSE (token-level halt). Matches SPEC §8 minus FEE_SCHEDULE (D11: no fee).
+        IHederaTokenService.TokenKey[] memory keys = new IHederaTokenService.TokenKey[](5);
         keys[0] = getSingleKey(KeyType.SUPPLY, KeyValueType.CONTRACT_ID, address(this));
         keys[1] = getSingleKey(KeyType.KYC, KeyValueType.CONTRACT_ID, address(this));
         keys[2] = getSingleKey(KeyType.FREEZE, KeyValueType.CONTRACT_ID, address(this));
+        keys[3] = getSingleKey(KeyType.WIPE, KeyValueType.CONTRACT_ID, address(this));
+        keys[4] = getSingleKey(KeyType.PAUSE, KeyValueType.CONTRACT_ID, address(this));
 
         IHederaTokenService.HederaToken memory token;
         token.name = name;
@@ -540,7 +567,12 @@ contract WaferVault is HederaTokenService, KeyHelper, ExpiryHelper, FeeHelper, O
         if (!_consumeTimelock(action)) return (0, 0); // queued, not yet executable
 
         Pool storage p = pools[d.poolId];
-        require(p.idleTinybar >= d.advanceTinybar, "INSUFFICIENT_IDLE");
+        // Only deploy idle that is FREE of the senior redemption-queue earmark: `queuedShares` is HBAR
+        // already owed to partially-filled redeemers (who burned ALL their shares and are senior, I10).
+        // Checking raw idle would let finance strand the queue in an illiquid receivable; use the same
+        // free-idle basis as _liquidAssets so the queue is always serviceable first.
+        uint256 freeIdle = p.idleTinybar > p.queuedShares ? p.idleTinybar - p.queuedShares : 0;
+        require(freeIdle >= d.advanceTinybar, "INSUFFICIENT_FREE_IDLE");
         require(address(this).balance >= d.advanceTinybar, "INSUFFICIENT_VAULT_HBAR");
 
         // --- effects: amortized-cost finance keeps NAV flat (idle -> receivable @ advance) ---
@@ -713,6 +745,10 @@ contract WaferVault is HederaTokenService, KeyHelper, ExpiryHelper, FeeHelper, O
         uint256 assets = msg.value; // tinybar
         sharesMinted = _convertToShares(p, assets);
         require(sharesMinted > 0, "ZERO_SHARES");
+        // `sharesMinted` is DERIVED (assets*totalShares/netAssets) and is NOT bounded by the
+        // msg.value<=uint64.max guard: once NAV < 1 (post-default) it can exceed int64.max and the
+        // int64(uint64(sharesMinted)) HTS cast would wrap/truncate, diverging accounting from supply.
+        require(sharesMinted <= MAX_HTS_AMOUNT, "SHARES_OVERFLOW");
 
         // --- effects ---
         p.idleTinybar += assets;
@@ -732,7 +768,7 @@ contract WaferVault is HederaTokenService, KeyHelper, ExpiryHelper, FeeHelper, O
      * @notice Redeem `shares` for native HBAR at NAV. Liquidity-aware: instant fill up to
      *         liquidAssets (idle minus the minBuffer reserve), remainder enqueued FIFO (D5).
      * @dev The investor must approve the vault for `shares` (ERC-20 facade) so the share pull
-     *      succeeds. Fee-collectors-exempt means this pull/burn never pays the 0.10% fee.
+     *      succeeds. The share ships with no custom fee (D11), so the pull/burn is a plain transfer.
      */
     function redeem(uint32 poolId, uint256 shares) external nonReentrant returns (uint256 filled, uint256 queued) {
         Pool storage p = pools[poolId];
@@ -742,7 +778,7 @@ contract WaferVault is HederaTokenService, KeyHelper, ExpiryHelper, FeeHelper, O
         // value out too; per-account exits are governed separately by freeze()/unfreeze().
         require(p.status == PoolStatus.Active, "POOL_PAUSED");
         require(shares > 0, "ZERO_SHARES");
-        require(shares <= type(uint64).max, "VALUE_TOO_LARGE");
+        require(shares <= MAX_HTS_AMOUNT, "VALUE_TOO_LARGE"); // int64 HTS-amount ceiling
 
         uint256 investorShares = p.totalShares - DEAD_SHARES;
         require(shares <= investorShares, "OVER_REDEEM");
@@ -817,11 +853,14 @@ contract WaferVault is HederaTokenService, KeyHelper, ExpiryHelper, FeeHelper, O
 
     /**
      * @notice Stand up the KYC-enabled share/WHBAR SaucerSwap market for a pool in ONE owner call,
-     *         resolving the KYC deadlock end-to-end (SPEC §10):
-     *           (1) adminGrantKyc(router)   — so the router can hold/route the share leg,
-     *           (2) addLiquidityETHNewPool  — create the pair + seed liquidity (HBAR-paired),
-     *           (3) read the new pair from the factory,
-     *           (4) adminGrantKyc(pair)     — so every pair transfer of the KYC-keyed share passes.
+     *         resolving the KYC deadlock end-to-end (SPEC §10). The router is NOT KYC-granted — a
+     *         Uniswap-v2 router transfers the LP leg caller->pair directly, so granting it KYC fails
+     *         (TOKEN_NOT_ASSOCIATED) and is unnecessary. The working sequence is:
+     *           (1) factory.createPair(share, WHBAR) — permissionless, self-associates the new pair,
+     *           (2) adminGrantKyc(pair)              — now the pair exists+associated, so the KYC-keyed
+     *                                                  share can settle into it,
+     *           (3) mint the share leg to the vault + approve the router,
+     *           (4) router.addLiquidityETH(...)      — seeds the KYC'd pair (LP token to the owner).
      * @dev The liquidity SHARE leg is freshly minted to the vault treasury and is NOT pool
      *      investor accounting: it is an owner-seeded market position (backed by the attached HBAR
      *      liquidity), so it does NOT touch idle/receivable/totalShares. Seed price ≈ NAV by passing
@@ -844,7 +883,7 @@ contract WaferVault is HederaTokenService, KeyHelper, ExpiryHelper, FeeHelper, O
         Pool storage p = pools[poolId];
         require(p.shareToken != address(0), "NO_POOL");
         require(secondaryPair[poolId] == address(0), "ALREADY_ENABLED");
-        require(shareLiquidity > 0 && shareLiquidity <= type(uint64).max, "SHARE_RANGE");
+        require(shareLiquidity > 0 && shareLiquidity <= MAX_HTS_AMOUNT, "SHARE_RANGE");
         require(hbarLiquidityTinybar > 0, "ZERO_HBAR_LIQ");
         require(msg.value <= type(uint64).max, "VALUE_TOO_LARGE");
         require(msg.value == pairCreateFeeTinybar + hbarLiquidityTinybar, "VALUE_MISMATCH");

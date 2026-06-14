@@ -29,6 +29,7 @@ const HBAR = 100_000_000n; // 1 HBAR in tinybar
 const WEIBAR = 1_000_000_000_000_000_000n; // 1 HBAR in weibar (RPC boundary only)
 const WEIBAR_PER_TINYBAR = 10_000_000_000n; // 1e10 — relay's RPC-boundary mapping
 const UINT64_MAX = 2n ** 64n - 1n;
+const MAX_HTS_AMOUNT = 2n ** 63n - 1n; // int64 max — the HTS-amount ceiling (CONTRACT: MAX_HTS_AMOUNT)
 const DEAD_SHARES = 1000n;
 const DEAD_SEED_TINYBAR = 1000n;
 
@@ -112,21 +113,27 @@ function liquidAssets(p: Pool): bigint {
   return freeIdle > reserve ? freeIdle - reserve : 0n;
 }
 
-/** CONTRACT: deposit() — require msg.value <= uint64 max, mint at NAV, idle += assets. */
+/** CONTRACT: deposit() — require msg.value <= uint64 max, guard derived shares <= int64 max
+ *  (SHARES_OVERFLOW), mint at NAV, idle += assets. */
 function deposit(p: Pool, assets: bigint): { sharesMinted: bigint } {
   if (assets <= 0n) throw new Error("ZERO_DEPOSIT");
   if (assets > UINT64_MAX) throw new Error("VALUE_TOO_LARGE");
   const sharesMinted = convertToShares(p, assets);
   if (sharesMinted <= 0n) throw new Error("ZERO_SHARES");
+  // Derived share amount is NOT bounded by the msg.value guard; once NAV < 1 it can exceed int64
+  // and the HTS cast would wrap/truncate, diverging accounting from supply (H1 / ACC-1 / SEC-1).
+  if (sharesMinted > MAX_HTS_AMOUNT) throw new Error("SHARES_OVERFLOW");
   p.idle += assets;
   p.totalShares += sharesMinted;
   return { sharesMinted };
 }
 
-/** CONTRACT: financeClaim() effects — idle -= advance; receivable += advance; carry := advance. */
+/** CONTRACT: financeClaim() effects — only deploy idle FREE of the senior queue (idle - queuedShares);
+ *  idle -= advance; receivable += advance; carry := advance. */
 function financeClaim(p: Pool, advance: bigint, expected: bigint, term: bigint, now: bigint): Claim {
   if (expected < advance) throw new Error("EXPECTED_LT_ADVANCE");
-  if (p.idle < advance) throw new Error("INSUFFICIENT_IDLE");
+  const freeIdle = p.idle > p.queuedShares ? p.idle - p.queuedShares : 0n;
+  if (freeIdle < advance) throw new Error("INSUFFICIENT_FREE_IDLE");
   p.idle -= advance;
   p.receivable += advance; // NAV FLAT (I3): assets unchanged, just idle -> receivable
   return {
@@ -327,10 +334,13 @@ describe("WaferVault — deposit / redeem round-trip at NAV", () => {
     expect(navPerShare(p)).to.be.closeToBig(navBefore, 100n);
   });
 
-  it("deposit rejects msg.value > uint64 max (VALUE_TOO_LARGE, SPEC §3 / D13)", () => {
-    const p = createPool();
-    expect(() => deposit(p, UINT64_MAX + 1n)).to.throw("VALUE_TOO_LARGE");
-    expect(() => deposit(p, UINT64_MAX)).to.not.throw();
+  it("deposit guards msg.value at uint64 max AND the derived mint at int64 max (SPEC §3 / D13 + H1)", () => {
+    expect(() => deposit(createPool(), UINT64_MAX + 1n)).to.throw("VALUE_TOO_LARGE");
+    // At genesis NAV 1.0 sharesMinted == assets, so the binding ceiling is the HTS int64 mint amount:
+    // a deposit in (int64.max, uint64.max] clears the msg.value guard but is rejected by SHARES_OVERFLOW
+    // (the old behavior truncated the mint at the int64 cast — the H1 bug this guard closes).
+    expect(() => deposit(createPool(), UINT64_MAX)).to.throw("SHARES_OVERFLOW");
+    expect(() => deposit(createPool(), MAX_HTS_AMOUNT)).to.not.throw();
   });
 });
 
@@ -351,11 +361,44 @@ describe("WaferVault — finance keeps NAV FLAT (invariant I3)", () => {
     expect(p.idle).to.equal(DEAD_SEED_TINYBAR + 100n * HBAR - 90n * HBAR);
   });
 
-  it("rejects financing more than idle (INSUFFICIENT_IDLE) and expected < advance", () => {
+  it("rejects financing more than free idle (INSUFFICIENT_FREE_IDLE) and expected < advance", () => {
     const p = createPool();
     deposit(p, 50n * HBAR);
-    expect(() => financeClaim(p, 90n * HBAR, 100n * HBAR, 90n, 0n)).to.throw("INSUFFICIENT_IDLE");
+    expect(() => financeClaim(p, 90n * HBAR, 100n * HBAR, 90n, 0n)).to.throw("INSUFFICIENT_FREE_IDLE");
     expect(() => financeClaim(p, 40n * HBAR, 30n * HBAR, 90n, 0n)).to.throw("EXPECTED_LT_ADVANCE");
+  });
+
+  it("M3: financeClaim respects the senior queue earmark — cannot deploy queued-owed idle", () => {
+    // idle=100, but 80 is owed to the senior redemption queue (queuedShares). Raw idle (100) would
+    // pass a 90 advance, stranding the queue; free idle (20) must reject it.
+    const p = createPool();
+    deposit(p, 100n * HBAR);
+    p.queuedShares = 80n * HBAR; // HBAR already owed to partially-filled redeemers (senior, I10)
+    expect(() => financeClaim(p, 90n * HBAR, 100n * HBAR, 90n, 0n)).to.throw("INSUFFICIENT_FREE_IDLE");
+    // financing within free idle (<= 20) is fine and does not touch the queued earmark.
+    const before = p.queuedShares;
+    financeClaim(p, 20n * HBAR, 25n * HBAR, 90n, 0n);
+    expect(p.queuedShares).to.equal(before);
+  });
+});
+
+describe("WaferVault — deposit guards the derived share amount at the HTS int64 boundary (H1)", () => {
+  it("reverts SHARES_OVERFLOW when an impaired pool (NAV<<1) makes a legal deposit mint > int64 max", () => {
+    // A 1000-HBAR pool (totalShares ~ 1e11) whose receivable is wiped to ~the dead seed: netAssets
+    // collapses, so shares = assets*totalShares/netAssets explodes past int64.max for a legal
+    // (<= uint64.max tinybar) deposit. The guard must catch it instead of truncating at the HTS cast.
+    const p = createPool();
+    deposit(p, 1000n * HBAR); // totalShares ~ 1000e8 + dead seed
+    p.receivable = 0n;
+    p.idle = DEAD_SEED_TINYBAR; // netAssets ~ tiny -> NAV << 1
+    const big = UINT64_MAX; // a legal-but-large deposit (passes the msg.value guard)
+    expect(() => deposit(p, big)).to.throw("SHARES_OVERFLOW");
+  });
+
+  it("a normal deposit at healthy NAV is well under the int64 ceiling", () => {
+    const p = createPool();
+    const { sharesMinted } = deposit(p, 100n * HBAR);
+    expect(sharesMinted).to.be.lessThan(MAX_HTS_AMOUNT);
   });
 });
 
@@ -721,11 +764,12 @@ describe("WaferVault — redemption: instant fill, queue, claimRedemption FIFO (
   });
 });
 
-describe("WaferVault — redeem fee-exemption (full-share burn, payout == previewRedeem)", () => {
-  // The share token's 0.10% fractional fee is all-collectors-exempt (D11): the vault is a party to
-  // deposit/redeem, so NO fee is taken on the burn. Pure-logic proof: the payout the contract
-  // computes (convertToAssets) is the FULL proportional value — nothing is shaved for a fee.
-  it("redeem payout equals previewRedeem with NO fee skim (vault is fee-exempt)", () => {
+describe("WaferVault — redeem is exact, no custom fee (full-share burn, payout == previewRedeem)", () => {
+  // The share token ships with NO custom fee (D11: a fractional fee on Hedera is assessed on every
+  // non-collector transfer and reverts INVALID_ACCOUNT_ID, breaking redeem operator->vault and the
+  // AMM). So redeem is a plain transfer+burn: the payout the contract computes (convertToAssets) is
+  // the FULL proportional value — nothing is shaved, and burning exactly `shares` never over-draws.
+  it("redeem payout equals previewRedeem exactly (no fee skim)", () => {
     const p = createPool();
     deposit(p, 100n * HBAR);
     p.receivable += 23n * HBAR; // some realized yield -> NAV > 1
@@ -733,13 +777,12 @@ describe("WaferVault — redeem fee-exemption (full-share burn, payout == previe
     const preview = convertToAssets(p, shares); // == previewRedeem
     const queue: RedemptionRequest[] = [];
     const { filled, queued } = redeem(p, queue, "alice", 0, shares);
-    expect(filled + queued).to.equal(preview); // exact: no 0.10% shaved off
+    expect(filled + queued).to.equal(preview); // exact: nothing shaved off
   });
 
-  it("full-share burn does not revert on the fee (the bug the exemption prevents)", () => {
-    // If the fee were NOT exempt, burning exactly `shares` would require shares*(1+fee) to be pulled
-    // and the burn of the gross amount would over-draw -> BURN_SHARE_FAIL. With exemption, burning
-    // exactly `shares` is correct. We assert the share accounting nets to zero with no fee inflation.
+  it("full-share burn nets to zero (no fee would inflate the pulled amount)", () => {
+    // With no fee, burning exactly `shares` is correct (a non-exempt fractional fee would require
+    // pulling shares*(1+fee) and over-draw -> BURN_SHARE_FAIL — the failure mode D11 avoids).
     const p = createPool();
     const minted = deposit(p, 50n * HBAR).sharesMinted;
     const queue: RedemptionRequest[] = [];

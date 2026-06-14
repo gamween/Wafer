@@ -522,24 +522,29 @@ describe("WaferVault — enableSecondaryMarket: fee conversion, seed-at-NAV, KYC
     expect(requiredValue(fee, hbarLiq)).to.equal(1060n * ONE);
   });
 
-  it("KYC-grant ordering is router-first then pair-after-create (deadlock resolution, §10)", () => {
-    // CONTRACT ordering inside enableSecondaryMarket: (1) grant router, (2) addLiquidityETHNewPool,
-    // (3) read pair from factory, (4) grant pair. The pair address does not exist before step 2,
-    // so the pair grant CANNOT precede pair creation. Model the ordering as a sequence and assert it.
+  it("KYC-grant ordering is createPair-first then grant-pair-then-seed (deadlock resolution, §10)", () => {
+    // CONTRACT ordering inside enableSecondaryMarket (WaferVault.sol): (1) factory.createPair(share,
+    // WHBAR) — permissionless, self-associates the new pair; (2) grantKyc(pair) now that it exists;
+    // (3) mint the share leg + approve the router; (4) router.addLiquidityETH seeds the KYC'd pair.
+    // The router is intentionally NOT KYC-granted (a v2 router transfers caller->pair directly, so a
+    // router grant fails TOKEN_NOT_ASSOCIATED). The pair grant CANNOT precede pair creation.
     const steps: string[] = [];
     function enableSecondaryMarket() {
-      steps.push("grantKyc:router"); // (1)
-      steps.push("addLiquidityETHNewPool"); // (2) creates pair
-      const pair = "0xPAIR"; // (3) read from factory.getPair (now non-zero)
+      steps.push("createPair"); // (1) creates + self-associates the pair
+      const pair = "0xPAIR"; // factory returns / getPair lookup (now non-zero)
       if (!pair) throw new Error("PAIR_NOT_CREATED");
-      steps.push("grantKyc:pair"); // (4)
+      steps.push("grantKyc:pair"); // (2) pair exists -> grant succeeds
+      steps.push("mint+approve"); // (3) mint share leg, approve router
+      steps.push("addLiquidityETH"); // (4) seed the KYC'd pair
       return pair;
     }
     const pair = enableSecondaryMarket();
     expect(pair).to.equal("0xPAIR");
-    expect(steps).to.deep.equal(["grantKyc:router", "addLiquidityETHNewPool", "grantKyc:pair"]);
-    // the pair grant must come AFTER the pool create (you cannot grant an address that doesn't exist).
-    expect(steps.indexOf("grantKyc:pair") > steps.indexOf("addLiquidityETHNewPool")).to.equal(true);
+    expect(steps).to.deep.equal(["createPair", "grantKyc:pair", "mint+approve", "addLiquidityETH"]);
+    // the router is never KYC-granted; the pair grant comes AFTER createPair and BEFORE the seed.
+    expect(steps).to.not.include("grantKyc:router");
+    expect(steps.indexOf("grantKyc:pair") > steps.indexOf("createPair")).to.equal(true);
+    expect(steps.indexOf("addLiquidityETH") > steps.indexOf("grantKyc:pair")).to.equal(true);
   });
 });
 
@@ -556,13 +561,13 @@ describe("WaferVault — enableSecondaryMarket: fee conversion, seed-at-NAV, KYC
  * coverage gap is explicit and intentional, never silent.
  */
 describe.skip("WaferVault — live HTS round-trips (run via `pnpm run smoke` on testnet)", () => {
-  it("createPool: 2 HTS creates (share-with-fee + claim NFT) + self-KYC + dead-share seed");
+  it("createPool: 2 HTS creates (share [no fee, 5 keys] + claim NFT) + self-KYC + dead-share seed");
   it("deposit: associate (IHRC719) -> adminGrantKyc -> mint+transfer shares to investor");
-  it("redeem: pull shares (ERC-20 facade) + burn from treasury, fee-exempt full-share burn succeeds");
+  it("redeem: pull shares (ERC-20 facade) + burn from treasury, full-share burn succeeds (no custom fee, D11)");
   it("financeClaim: escrow device-NFT (transferNFT) + mint claim NFT + pay advance (CEI)");
   it("settleRewards repay branch: burn claim NFT + return device-NFT to operator on Repaid");
   it("markDefault: write down carry + retain/wipe device-NFT collateral");
-  it("0.10% fractional fee charged on a secondary (third-party) transfer, exempt on deposit/redeem");
+  it("pausePool: HTS pauseToken halts ALL share transfers (incl. secondary); unpausePool restores");
   it("adminGrantKyc / freeze: grant/revoke + freeze/unfreeze gate HTS transfers (rc==22 checks)");
-  it("enableSecondaryMarket: KYC-grant router -> addLiquidityETHNewPool (create+seed) -> KYC-grant pair");
+  it("enableSecondaryMarket: createPair -> grantKyc(pair) -> mint+approve -> addLiquidityETH (router NOT KYC'd)");
 });
