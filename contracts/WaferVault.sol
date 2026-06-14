@@ -7,6 +7,7 @@ import "@hiero-ledger/hiero-contracts/token-service/KeyHelper.sol";
 import "@hiero-ledger/hiero-contracts/token-service/ExpiryHelper.sol";
 import "@hiero-ledger/hiero-contracts/token-service/FeeHelper.sol";
 import "@hiero-ledger/hiero-contracts/common/HederaResponseCodes.sol";
+import "@hiero-ledger/hiero-contracts/schedule-service/HederaScheduleService.sol";
 import "@openzeppelin/contracts/access/Ownable2Step.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
@@ -56,7 +57,7 @@ interface IShareApprove {
  *   on HTS business errors (KYC not granted, frozen, ...). We therefore check responseCode == 22
  *   (SUCCESS) on EVERY HTS call and revert otherwise.
  */
-contract WaferVault is HederaTokenService, KeyHelper, ExpiryHelper, FeeHelper, Ownable2Step, ReentrancyGuard {
+contract WaferVault is HederaTokenService, HederaScheduleService, KeyHelper, ExpiryHelper, FeeHelper, Ownable2Step, ReentrancyGuard {
     // --- constants -----------------------------------------------------------
     uint256 internal constant ONE = 1e8; // 1.0 in tinybar / share micro-units (8 dp)
     int32 internal constant SHARE_DECIMALS = 8;
@@ -81,6 +82,17 @@ contract WaferVault is HederaTokenService, KeyHelper, ExpiryHelper, FeeHelper, O
 
     // Timelock window for financeClaim / markDefault (SPEC §7, D9).
     uint64 public timelockDelay = 0; // seconds; 0 = execute-now (set >0 in prod via setTimelockDelay)
+
+    // Gas budget for the HIP-1215 scheduled `releaseAdvance` execution (one state write + one payout).
+    uint256 internal constant RELEASE_ADVANCE_GAS = 400_000;
+
+    // HIP-1215 "locked virement": if advanceLockSeconds > 0, financeClaim LOCKS the advance in the
+    // vault and schedules a Hedera Schedule Service (HSS, 0x16b) call that auto-releases it to the
+    // operator after the window — no keeper. 0 = pay the advance immediately at finance (default).
+    uint64 public advanceLockSeconds = 0;
+    uint256 public pendingAdvanceTinybar; // Σ advances scheduled-but-not-yet-released (excluded from surplus)
+    mapping(uint256 => uint64) public advanceUnlockTime; // claimId => unix unlock (0 = none / paid immediately)
+    mapping(uint256 => bool) public advanceReleased; // claimId => scheduled advance already paid out
 
     // --- types ---------------------------------------------------------------
     enum DealStatus {
@@ -217,6 +229,9 @@ contract WaferVault is HederaTokenService, KeyHelper, ExpiryHelper, FeeHelper, O
     event SecondaryConfigSet(address router, address whbar, address factory);
     event SecondaryMarketEnabled(uint32 indexed poolId, address pair, uint256 shareLiquidity, uint256 hbarLiquidity);
     event SurplusWithdrawn(address indexed to, uint256 amount);
+    event AdvanceLockSet(uint64 lockSeconds);
+    event AdvanceScheduled(uint256 indexed claimId, address indexed operator, uint256 amount, uint64 unlockAt, address schedule);
+    event AdvanceReleased(uint256 indexed claimId, address indexed operator, uint256 amount);
 
     // --- modifiers -----------------------------------------------------------
     modifier onlyOperator() {
@@ -244,6 +259,14 @@ contract WaferVault is HederaTokenService, KeyHelper, ExpiryHelper, FeeHelper, O
     function setTimelockDelay(uint64 delay) external onlyOwner {
         timelockDelay = delay;
         emit TimelockDelaySet(delay);
+    }
+
+    /// @notice Set the advance-payout lock window (HIP-1215). 0 = pay the advance immediately at
+    ///         finance (default). >0 = lock the advance in the vault and schedule its auto-release to
+    ///         the operator after `lockSeconds` (e.g. 10 in demo, days in prod) — no keeper.
+    function setAdvanceLock(uint64 lockSeconds) external onlyOwner {
+        advanceLockSeconds = lockSeconds;
+        emit AdvanceLockSet(lockSeconds);
     }
 
     function registerOperator(address operator, bool allowed) external onlyOwner {
@@ -283,7 +306,9 @@ contract WaferVault is HederaTokenService, KeyHelper, ExpiryHelper, FeeHelper, O
     ///      every pool's idle (the CASH leg backing live + queued shares) is preserved, so I1 holds.
     function ownerWithdrawSurplus(address payable to) external onlyOwner nonReentrant returns (uint256 amount) {
         require(to != address(0), "ZERO_TO");
-        uint256 backed = 0;
+        // Backed HBAR = every pool's idle (CASH leg) PLUS advances locked-but-not-yet-released to
+        // operators (pendingAdvanceTinybar) — both are obligations, never sweepable surplus.
+        uint256 backed = pendingAdvanceTinybar;
         for (uint32 i = 0; i < poolCount; i++) backed += pools[i].idleTinybar;
         uint256 bal = address(this).balance;
         require(bal > backed, "NO_SURPLUS");
@@ -616,8 +641,49 @@ contract WaferVault is HederaTokenService, KeyHelper, ExpiryHelper, FeeHelper, O
 
         emit ClaimFinanced(claimId, dealId, d.poolId, d.operator, d.advanceTinybar, d.expectedTinybar, d.termSeconds, serial, d.deviceNft, d.deviceSerial);
 
-        // --- interaction LAST (CEI): pay the advance to the operator ---
-        (bool ok, ) = payable(d.operator).call{value: d.advanceTinybar}("");
+        // --- interaction LAST (CEI): pay OR lock+schedule the advance ---
+        if (advanceLockSeconds == 0) {
+            // Immediate payout (default).
+            (bool ok, ) = payable(d.operator).call{value: d.advanceTinybar}("");
+            require(ok, "HBAR_ADVANCE_FAIL");
+        } else {
+            // HIP-1215 "locked virement": the advance stays in the vault (earmarked in
+            // pendingAdvanceTinybar) and an HSS-scheduled call auto-releases it at unlock time.
+            uint64 unlockAt = uint64(block.timestamp) + advanceLockSeconds;
+            advanceUnlockTime[claimId] = unlockAt;
+            pendingAdvanceTinybar += d.advanceTinybar;
+            (int64 src, address schedule) = scheduleCall(
+                address(this),
+                uint256(unlockAt),
+                RELEASE_ADVANCE_GAS,
+                0, // value 0: releaseAdvance pays the operator from the vault's own balance
+                abi.encodeWithSelector(this.releaseAdvance.selector, claimId)
+            );
+            require(uint256(int256(src)) == SUCCESS, "SCHEDULE_ADVANCE_FAIL");
+            emit AdvanceScheduled(claimId, d.operator, d.advanceTinybar, unlockAt, schedule);
+        }
+    }
+
+    /// @notice Release a locked, scheduled advance to its operator. Auto-fired by Hedera Schedule
+    ///         Service (HIP-1215) at the unlock time — no keeper. Permissionless but gated by the
+    ///         unlock time + a once-only flag, so it can pay neither early nor twice even if a human
+    ///         calls it. The advance is the operator's at finance regardless of later claim status.
+    function releaseAdvance(uint256 claimId) external nonReentrant {
+        uint64 unlockAt = advanceUnlockTime[claimId];
+        require(unlockAt != 0, "NO_SCHEDULED_ADVANCE");
+        require(!advanceReleased[claimId], "ALREADY_RELEASED");
+        require(block.timestamp >= unlockAt, "ADVANCE_LOCKED");
+
+        Claim storage c = claims[claimId];
+        uint256 amount = c.advanceTinybar;
+
+        // --- effects ---
+        advanceReleased[claimId] = true;
+        pendingAdvanceTinybar -= amount;
+        emit AdvanceReleased(claimId, c.operator, amount);
+
+        // --- interaction LAST ---
+        (bool ok, ) = payable(c.operator).call{value: amount}("");
         require(ok, "HBAR_ADVANCE_FAIL");
     }
 

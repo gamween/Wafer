@@ -1,5 +1,11 @@
 # Sponsor & track strategy
 
+> ⚠️ **Superseded (2026-06-14):** the architecture below ("pure-HTS / no-Solidity") was an early
+> plan. Wafer shipped as a **Solidity HSCS vault** (`WaferVault.sol`) that creates/manages HTS tokens
+> and now uses **HIP-1215 scheduled transactions** (locked advance + self-scheduling settle). The
+> target is **Hedera — Tokenization** ($3k) + main Hedera ($15k); see `SPEC.md` / `docs/DEMO.md` for
+> the real, current design. The strategy notes below are kept for historical context only.
+
 Brand-new project (no Continuity tracks). Max 3 sponsors. World banned. Chainlink (CRE /
 Confidential AI) and Unlink ("Add Privacy") avoided — taken by a strong contact.
 

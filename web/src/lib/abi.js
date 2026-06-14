@@ -152,6 +152,14 @@ export const VAULT_ABI = [
   { name: "setMinBuffer", type: "function", stateMutability: "nonpayable", inputs: [{ name: "poolId", type: "uint32" }, { name: "bps", type: "uint16" }], outputs: [] },
   { name: "setTimelockDelay", type: "function", stateMutability: "nonpayable", inputs: [{ name: "delay", type: "uint64" }], outputs: [] },
   { name: "cancelTimelock", type: "function", stateMutability: "nonpayable", inputs: [{ name: "action", type: "bytes32" }], outputs: [] },
+  // HIP-1215 locked advance (SPEC §9) + surplus sweep.
+  { name: "setAdvanceLock", type: "function", stateMutability: "nonpayable", inputs: [{ name: "lockSeconds", type: "uint64" }], outputs: [] },
+  { name: "releaseAdvance", type: "function", stateMutability: "nonpayable", inputs: [{ name: "claimId", type: "uint256" }], outputs: [] },
+  { name: "advanceLockSeconds", type: "function", stateMutability: "view", inputs: [], outputs: [{ name: "", type: "uint64" }] },
+  { name: "pendingAdvanceTinybar", type: "function", stateMutability: "view", inputs: [], outputs: [{ name: "", type: "uint256" }] },
+  { name: "advanceUnlockTime", type: "function", stateMutability: "view", inputs: [{ name: "claimId", type: "uint256" }], outputs: [{ name: "", type: "uint64" }] },
+  { name: "advanceReleased", type: "function", stateMutability: "view", inputs: [{ name: "claimId", type: "uint256" }], outputs: [{ name: "", type: "bool" }] },
+  { name: "ownerWithdrawSurplus", type: "function", stateMutability: "nonpayable", inputs: [{ name: "to", type: "address" }], outputs: [{ name: "amount", type: "uint256" }] },
   { name: "setSecondaryConfig", type: "function", stateMutability: "nonpayable", inputs: [{ name: "router", type: "address" }, { name: "whbar", type: "address" }, { name: "factory", type: "address" }], outputs: [] },
   { name: "enableSecondaryMarket", type: "function", stateMutability: "payable", inputs: [
     { name: "poolId", type: "uint32" },
@@ -281,6 +289,24 @@ export const VAULT_ABI = [
     { name: "pair", type: "address", indexed: false },
     { name: "shareLiquidity", type: "uint256", indexed: false },
     { name: "hbarLiquidity", type: "uint256", indexed: false },
+  ] },
+  // HIP-1215 "locked virement" lifecycle (surfaced in the Activity feed).
+  { type: "event", name: "AdvanceLockSet", inputs: [{ name: "lockSeconds", type: "uint64", indexed: false }] },
+  { type: "event", name: "AdvanceScheduled", inputs: [
+    { name: "claimId", type: "uint256", indexed: true },
+    { name: "operator", type: "address", indexed: true },
+    { name: "amount", type: "uint256", indexed: false },
+    { name: "unlockAt", type: "uint64", indexed: false },
+    { name: "schedule", type: "address", indexed: false },
+  ] },
+  { type: "event", name: "AdvanceReleased", inputs: [
+    { name: "claimId", type: "uint256", indexed: true },
+    { name: "operator", type: "address", indexed: true },
+    { name: "amount", type: "uint256", indexed: false },
+  ] },
+  { type: "event", name: "SurplusWithdrawn", inputs: [
+    { name: "to", type: "address", indexed: true },
+    { name: "amount", type: "uint256", indexed: false },
   ] },
 ];
 

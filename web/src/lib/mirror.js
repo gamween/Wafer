@@ -66,6 +66,10 @@ function normalizeEvent(decoded, log) {
       return { ...base, poolId: Number(args.poolId) };
     case "Frozen":
       return { ...base, poolId: Number(args.poolId), account: args.account };
+    case "AdvanceScheduled":
+      return { ...base, claimId: Number(args.claimId), account: args.operator, assets: args.amount };
+    case "AdvanceReleased":
+      return { ...base, claimId: Number(args.claimId), account: args.operator, assets: args.amount };
     default:
       return null; // skip OwnershipTransferred, ActionQueued, etc. from the feed
   }

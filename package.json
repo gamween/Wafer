@@ -14,6 +14,7 @@
     "typecheck": "tsc -p tsconfig.hardhat.json --noEmit",
     "deploy": "TS_NODE_PROJECT=tsconfig.hardhat.json hardhat run scripts/deploy.ts --network testnet",
     "smoke": "TS_NODE_PROJECT=tsconfig.hardhat.json hardhat run scripts/smoke.ts --network testnet",
+    "smoke:hss": "TS_NODE_PROJECT=tsconfig.hardhat.json hardhat run scripts/smoke-hss.ts --network testnet",
     "verify": "TS_NODE_PROJECT=tsconfig.hardhat.json hardhat verify --network testnet",
     "resolve-operator": "tsx scripts/resolve-operator.ts"
   },

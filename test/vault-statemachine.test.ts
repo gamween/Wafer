@@ -549,6 +549,62 @@ describe("WaferVault — enableSecondaryMarket: fee conversion, seed-at-NAV, KYC
 });
 
 // =============================================================================
+//   HIP-1215 locked advance — releaseAdvance gating (pure permissioning/timing)
+// =============================================================================
+describe("WaferVault — HIP-1215 locked advance: release gating (no early pay, no double pay)", () => {
+  const HBAR = 10n ** 8n;
+  // CONTRACT: releaseAdvance(claimId) — require unlock!=0, require !released, require now>=unlock.
+  type Locked = { advance: bigint; unlockAt: bigint; released: boolean };
+  function releaseAdvance(a: Locked, now: bigint): bigint {
+    if (a.unlockAt === 0n) throw new Error("NO_SCHEDULED_ADVANCE");
+    if (a.released) throw new Error("ALREADY_RELEASED");
+    if (now < a.unlockAt) throw new Error("ADVANCE_LOCKED");
+    a.released = true;
+    return a.advance;
+  }
+
+  it("cannot release before the unlock time (the lock is real even against a manual call)", () => {
+    const a: Locked = { advance: 9n * HBAR, unlockAt: 1000n, released: false };
+    expect(() => releaseAdvance(a, 999n)).to.throw("ADVANCE_LOCKED");
+    expect(a.released).to.equal(false);
+  });
+
+  it("releases exactly once at/after unlock and cannot be replayed", () => {
+    const a: Locked = { advance: 9n * HBAR, unlockAt: 1000n, released: false };
+    expect(releaseAdvance(a, 1000n)).to.equal(9n * HBAR);
+    expect(() => releaseAdvance(a, 1001n)).to.throw("ALREADY_RELEASED");
+  });
+
+  it("rejects a claim that has no scheduled advance", () => {
+    expect(() => releaseAdvance({ advance: 0n, unlockAt: 0n, released: false }, 1n)).to.throw("NO_SCHEDULED_ADVANCE");
+  });
+});
+
+// =============================================================================
+//   MockRewardSource — HIP-1215 self-drip next-interval scheduling (pure math)
+// =============================================================================
+describe("MockRewardSource — self-drip schedules each interval boundary, no keeper", () => {
+  // CONTRACT: _scheduleNext — nextAt = start + interval*(dripsDone+1); clamp to now+1 if already past.
+  function nextAt(start: bigint, term: bigint, dripCount: bigint, dripsDone: bigint, now: bigint): bigint {
+    let interval = term / dripCount;
+    if (interval === 0n) interval = 1n;
+    let n = start + interval * (dripsDone + 1n);
+    if (n <= now) n = now + 1n;
+    return n;
+  }
+
+  it("schedules at each interval boundary (term 60s / 3 drips => +20, +40, +60)", () => {
+    expect(nextAt(1000n, 60n, 3n, 0n, 1000n)).to.equal(1020n);
+    expect(nextAt(1000n, 60n, 3n, 1n, 1000n)).to.equal(1040n);
+    expect(nextAt(1000n, 60n, 3n, 2n, 1000n)).to.equal(1060n);
+  });
+
+  it("clamps to now+1 when the next boundary is already in the past", () => {
+    expect(nextAt(1000n, 60n, 3n, 2n, 1100n)).to.equal(1101n);
+  });
+});
+
+// =============================================================================
 //          Live-HTS-only paths — proven by `pnpm run smoke` on testnet
 // =============================================================================
 
@@ -570,4 +626,6 @@ describe.skip("WaferVault — live HTS round-trips (run via `pnpm run smoke` on 
   it("pausePool: HTS pauseToken halts ALL share transfers (incl. secondary); unpausePool restores");
   it("adminGrantKyc / freeze: grant/revoke + freeze/unfreeze gate HTS transfers (rc==22 checks)");
   it("enableSecondaryMarket: createPair -> grantKyc(pair) -> mint+approve -> addLiquidityETH (router NOT KYC'd)");
+  it("HIP-1215 locked advance: financeClaim schedules releaseAdvance via HSS (0x16b); auto-fires at unlock, no keeper");
+  it("HIP-1215 self-drip: MockRewardSource.armSelfDrip schedules scheduledDrip which reschedules each interval, no keeper");
 });

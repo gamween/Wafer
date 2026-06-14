@@ -21,6 +21,8 @@ const TYPE_META = {
   KycRevoked: { label: "KYC revoked", tone: "neg" },
   Paused: { label: "Pool paused", tone: "neg" },
   Frozen: { label: "Account frozen", tone: "neg" },
+  AdvanceScheduled: { label: "Advance locked (HIP-1215)", tone: "neutral" },
+  AdvanceReleased: { label: "Advance released", tone: "pos" },
 };
 
 export default function Activity({ refreshKey }) {

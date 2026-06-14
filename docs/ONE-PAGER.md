@@ -56,7 +56,7 @@ so per-deal APR differences become one diversified pool yield. The risk class is
 
 ## Hedera stack
 
-- **HTS fungible pool-share** token (KYC + freeze keys held by the vault, low fractional fee) — the tokenized fund unit.
+- **HTS fungible pool-share** token (KYC + freeze + pause keys held by the vault, no custom fee) — the tokenized fund unit.
 - **HTS reward-claim NFT** — the on-chain receipt of each financed deal, held by the vault, burned at maturity.
 - **`WaferVault`** smart contract (HSCS, via `@hiero-ledger/hiero-contracts`) — pools, financing,
   amortized-cost NAV, deposit/redeem, reward settlement, default. **Native HBAR**.
