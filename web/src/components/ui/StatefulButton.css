@@ -1,8 +1,9 @@
 /* Non-layout animations only — all sizing/positioning is inline in the component
-   so the button can never grow if this file is late/missing. */
-.sb-spin { animation: sb-spin 0.7s linear infinite; }
-@keyframes sb-spin { to { transform: rotate(360deg); } }
+   so the button can never grow if this file is late/missing. Namespaced `sbtn`
+   to avoid colliding with the old Sidebar `.sb` rule. */
+.sbtn-spin { animation: sbtn-spin 0.7s linear infinite; }
+@keyframes sbtn-spin { to { transform: rotate(360deg); } }
 
-.sb-checkpath { stroke-dasharray: 24; stroke-dashoffset: 24; }
-.sb-success .sb-checkpath { animation: sb-draw 0.4s ease forwards; }
-@keyframes sb-draw { to { stroke-dashoffset: 0; } }
+.sbtn-checkpath { stroke-dasharray: 24; stroke-dashoffset: 24; }
+.sbtn-success .sbtn-checkpath { animation: sbtn-draw 0.4s ease forwards; }
+@keyframes sbtn-draw { to { stroke-dashoffset: 0; } }

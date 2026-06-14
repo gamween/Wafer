@@ -3,10 +3,9 @@ import "./StatefulButton.css";
 
 // Stateful button: keeps the caller's button styling (pass the same className) and
 // only animates the inner state idle → loading (spinner) → success (check) → idle
-// around an async onClick. Layout-critical styles are INLINE so the button can
-// never blow up if the stylesheet is slow/missing; the CSS file only holds the
-// (non-layout) spin + check-draw keyframes. Spinner/check use currentColor so they
-// match whatever button is wrapped — aesthetics untouched.
+// around an async onClick. Uses the `sbtn` namespace (NOT `sb`, which collides with
+// the old Sidebar's `.sb { height:100vh }` rule). Layout is inline so it can't
+// blow up if the stylesheet is late; spinner/check use currentColor.
 const OVERLAY = {
   position: "absolute",
   inset: 0,
@@ -37,7 +36,7 @@ export default function StatefulButton({ onClick, children, className = "", disa
   return (
     <button
       type="button"
-      className={`sb ${className} sb-${state}`}
+      className={`sbtn ${className} sbtn-${state}`}
       onClick={handle}
       disabled={disabled || state !== "idle"}
       aria-busy={state === "loading"}
@@ -47,13 +46,13 @@ export default function StatefulButton({ onClick, children, className = "", disa
       <span style={{ ...fade("idle"), display: "inline-flex", alignItems: "center", gap: "0.5rem" }}>{children}</span>
       <span aria-hidden="true" style={{ ...OVERLAY, ...fade("loading") }}>
         <span
-          className="sb-spin"
+          className="sbtn-spin"
           style={{ width: "1.05em", height: "1.05em", border: "2px solid currentColor", borderTopColor: "transparent", borderRadius: "50%" }}
         />
       </span>
       <span aria-hidden="true" style={{ ...OVERLAY, ...fade("success") }}>
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-          <path className="sb-checkpath" d="M5 13l4 4L19 7" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+          <path className="sbtn-checkpath" d="M5 13l4 4L19 7" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
       </span>
     </button>
