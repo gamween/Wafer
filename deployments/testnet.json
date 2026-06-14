@@ -1,33 +1,33 @@
 {
   "network": "testnet",
   "chainId": 296,
-  "createdAt": "2026-06-14T03:36:05.366Z",
-  "updatedAt": "2026-06-14T03:36:05.366Z",
+  "createdAt": "2026-06-14T11:00:00.923Z",
+  "updatedAt": "2026-06-14T13:11:06.540Z",
   "settlementAsset": "HBAR",
   "operator": "0xf6fAc89C3a2bAA468c78d3A638cA2F44F5fdBDbF",
-  "vaultAddress": "0x9b8752C8a7131529E5DA8Fb6EDcaDA9097FaD244",
-  "vaultId": "0.0.9228634",
+  "vaultAddress": "0x4B821d6bC76203C3C21131849C40d04C84bb75d5",
+  "vaultId": "0.0.9231166",
   "pool": {
     "id": 0,
     "name": "Wafer GPU-A",
     "symbol": "wGPUA",
     "category": "GPU",
     "class": "A",
-    "shareTokenEvm": "0x00000000000000000000000000000000008cD15C",
-    "shareTokenId": "0.0.9228636",
-    "claimNftEvm": "0x00000000000000000000000000000000008cd15D",
-    "claimNftId": "0.0.9228637"
+    "shareTokenEvm": "0x00000000000000000000000000000000008cDB41",
+    "shareTokenId": "0.0.9231169",
+    "claimNftEvm": "0x00000000000000000000000000000000008CDB42",
+    "claimNftId": "0.0.9231170"
   },
   "mocks": {
     "rewardSource": {
-      "evm": "0x909cbCf432315CaB7B7844C728F1f0e83d3d0f01",
-      "id": "0.0.9228640"
+      "evm": "0xe621ea918299E1ED5f69bB8c85D879F4E88aAa1f",
+      "id": "0.0.9232002"
     },
     "deviceNft": {
-      "evm": "0x418dE645A67BE98c556aae7a856d9247D3b0e538",
-      "id": "0.0.9228642",
-      "collectionEvm": "0x00000000000000000000000000000000008cD165",
-      "collectionId": "0.0.9228645"
+      "evm": "0x2618837d4087726cdF67C1B6ee26f39df75Ef6B3",
+      "id": "0.0.9231175",
+      "collectionEvm": "0x00000000000000000000000000000000008cDB48",
+      "collectionId": "0.0.9231176"
     }
   },
   "secondary": {
@@ -36,23 +36,14 @@
     "factory": "0x00000000000000000000000000000000000026e7"
   },
   "hashscan": {
-    "vault": "https://hashscan.io/testnet/contract/0x9b8752C8a7131529E5DA8Fb6EDcaDA9097FaD244",
-    "shareToken": "https://hashscan.io/testnet/token/0.0.9228636",
-    "claimNft": "https://hashscan.io/testnet/token/0.0.9228637",
-    "rewardSource": "https://hashscan.io/testnet/contract/0x909cbCf432315CaB7B7844C728F1f0e83d3d0f01",
-    "deviceNft": "https://hashscan.io/testnet/contract/0x418dE645A67BE98c556aae7a856d9247D3b0e538",
-    "deviceCollection": "https://hashscan.io/testnet/token/0.0.9228645",
-    "deployTx": "https://hashscan.io/testnet/transaction/0x9d35595243b1d16d50d7f4faf5c18877db63204ab383bef02689a1415be76d3f",
-    "createPoolTx": "https://hashscan.io/testnet/transaction/0xf3ab3c1266c67f5cf75b38613466ca104e40ac58c3f53d721ac2ce46fb4d7fa4"
+    "vault": "https://hashscan.io/testnet/contract/0x4B821d6bC76203C3C21131849C40d04C84bb75d5",
+    "shareToken": "https://hashscan.io/testnet/token/0.0.9231169",
+    "claimNft": "https://hashscan.io/testnet/token/0.0.9231170",
+    "rewardSource": "https://hashscan.io/testnet/contract/0xe621ea918299E1ED5f69bB8c85D879F4E88aAa1f",
+    "deviceNft": "https://hashscan.io/testnet/contract/0x2618837d4087726cdF67C1B6ee26f39df75Ef6B3",
+    "deviceCollection": "https://hashscan.io/testnet/token/0.0.9231176",
+    "deployTx": "https://hashscan.io/testnet/transaction/0xf1026dc97e200697e6c991463c79e2a2487a5b45fd8a212a19d94c6484aa7074",
+    "createPoolTx": "https://hashscan.io/testnet/transaction/0xf0c31f601c5d739d846e96aa2bb32876a200b00afe1f8ac6e86d9c7b768456cd"
   },
-  "sourcify": "https://repo.sourcify.dev/contracts/full_match/296/0x9b8752C8a7131529E5DA8Fb6EDcaDA9097FaD244/",
-  "secondaryPair": {
-    "0": {
-      "poolId": 0,
-      "pair": "0x22CD5257e92Ca96186cA904780B72C965ba426B1",
-      "pairContract": "https://hashscan.io/testnet/contract/0x22CD5257e92Ca96186cA904780B72C965ba426B1",
-      "enableTx": "https://hashscan.io/testnet/transaction/0xcedbd71abb8f82e609859b94154b6c9da654e135ab5fa3f7165d45d3d4bad12d",
-      "enabledVia": "one-call enableSecondaryMarket"
-    }
-  }
+  "sourcify": "https://repo.sourcify.dev/contracts/full_match/296/0x4B821d6bC76203C3C21131849C40d04C84bb75d5/"
 }

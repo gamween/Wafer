@@ -23,7 +23,10 @@ interface IWaferVaultSettle {
  */
 contract MockRewardSource is Ownable, ReentrancyGuard, HederaScheduleService {
     uint256 internal constant SUCCESS = uint256(int256(HederaResponseCodes.SUCCESS)); // 22
-    uint256 internal constant DRIP_GAS = 800_000; // gas budget for an HSS-scheduled scheduledDrip
+    // Gas budget for an HSS-scheduled scheduledDrip: it must cover the settle (~125k, plus the HTS
+    // burn/return on the repay interval) AND the reschedule (one scheduleCall ≈ 1.3M gas), so this is
+    // generously sized — a too-small limit reverts the whole scheduled tx (no settle, chain stops).
+    uint256 internal constant DRIP_GAS = 6_000_000;
 
     IWaferVaultSettle public immutable vault;
 
@@ -129,41 +132,43 @@ contract MockRewardSource is Ownable, ReentrancyGuard, HederaScheduleService {
     ///         on-chain via the Hedera Schedule Service (HSS, 0x16b) and reschedules the next, until
     ///         the term completes — replacing the off-chain keeper / JS poll loop. The contract is the
     ///         schedule payer, so it must hold the prefunded reward HBAR (it does, from fund()).
-    function armSelfDrip(uint256 scheduleId) external onlyOwner {
+    /// @notice Arm a keeper-free reward settlement via HSS: schedule ONE scheduledDrip at maturity
+    ///         (startTime + termSeconds) that releases the full reward in a single Hedera-scheduled
+    ///         transaction — no off-chain keeper, no JS loop.
+    /// @dev HIP-1215 permits only ONE self-targeting schedule per transaction and forbids a scheduled
+    ///      execution from creating another (NO_SCHEDULING_ALLOWED_AFTER_SCHEDULED_RECURSION), so a
+    ///      recurring/per-interval chain is not possible on-chain — we schedule a single maturity
+    ///      settlement instead (the manual drip() stays as the per-interval / fallback path).
+    ///      payable: the scheduling contract PAYS the scheduled execution's gas, so attach an HBAR gas
+    ///      buffer on top of the prefunded reward. Reward HBAR is forwarded to the vault untouched.
+    function armSelfDrip(uint256 scheduleId) external payable onlyOwner {
         require(scheduleId < schedules.length, "NO_SCHEDULE");
-        require(!schedules[scheduleId].defaulted, "DEFAULTED");
+        Schedule storage s = schedules[scheduleId];
+        require(!s.defaulted, "DEFAULTED");
         selfScheduling[scheduleId] = true;
-        _scheduleNext(scheduleId);
+
+        uint64 at = s.startTime + s.termSeconds; // maturity: by now every interval is due
+        if (at <= uint64(block.timestamp)) at = uint64(block.timestamp) + 3;
+        (int64 rc, address schedule) = scheduleCall(
+            address(this),
+            uint256(at),
+            DRIP_GAS,
+            0,
+            abi.encodeWithSelector(this.scheduledDrip.selector, scheduleId)
+        );
+        require(uint256(int256(rc)) == SUCCESS, "SCHEDULE_FAIL");
+        emit SelfDripScheduled(scheduleId, at, schedule);
     }
 
-    /// @notice HSS-fired drip: release the due interval (if any) then schedule the next. Tolerant of a
-    ///         slightly-early fire (no revert — just reschedules); stops when fully released/defaulted.
+    /// @notice HSS-fired settlement: release every interval now due (at maturity, the full remainder)
+    ///         into the vault — repaying the claim. Does NOT reschedule (HIP-1215 forbids it).
+    ///         Idempotent: a fire with nothing newly due is a no-op (no revert).
     function scheduledDrip(uint256 scheduleId) external nonReentrant {
         require(scheduleId < schedules.length, "NO_SCHEDULE");
         Schedule storage s = schedules[scheduleId];
         if (s.defaulted || s.dripsDone >= s.dripCount) return;
         uint32 due = _dueIntervals(s);
         if (due > s.dripsDone) _release(s, scheduleId, due);
-        _scheduleNext(scheduleId);
-    }
-
-    /// @dev Schedule the next scheduledDrip at the next interval boundary (or +1s if already past).
-    function _scheduleNext(uint256 scheduleId) internal {
-        Schedule storage s = schedules[scheduleId];
-        if (s.defaulted || s.dripsDone >= s.dripCount) return;
-        uint256 interval = uint256(s.termSeconds) / uint256(s.dripCount);
-        if (interval == 0) interval = 1;
-        uint64 nextAt = s.startTime + uint64(interval * (uint256(s.dripsDone) + 1));
-        if (nextAt <= uint64(block.timestamp)) nextAt = uint64(block.timestamp) + 1;
-        (int64 rc, address schedule) = scheduleCall(
-            address(this),
-            uint256(nextAt),
-            DRIP_GAS,
-            0,
-            abi.encodeWithSelector(this.scheduledDrip.selector, scheduleId)
-        );
-        require(uint256(int256(rc)) == SUCCESS, "SCHEDULE_FAIL");
-        emit SelfDripScheduled(scheduleId, nextAt, schedule);
     }
 
     /// @notice (releasableNow, remaining) in tinybar for a schedule.

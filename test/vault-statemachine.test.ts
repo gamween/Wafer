@@ -583,24 +583,21 @@ describe("WaferVault — HIP-1215 locked advance: release gating (no early pay, 
 // =============================================================================
 //   MockRewardSource — HIP-1215 self-drip next-interval scheduling (pure math)
 // =============================================================================
-describe("MockRewardSource — self-drip schedules each interval boundary, no keeper", () => {
-  // CONTRACT: _scheduleNext — nextAt = start + interval*(dripsDone+1); clamp to now+1 if already past.
-  function nextAt(start: bigint, term: bigint, dripCount: bigint, dripsDone: bigint, now: bigint): bigint {
-    let interval = term / dripCount;
-    if (interval === 0n) interval = 1n;
-    let n = start + interval * (dripsDone + 1n);
-    if (n <= now) n = now + 1n;
-    return n;
+describe("MockRewardSource — armSelfDrip schedules ONE keeper-free settlement at maturity", () => {
+  // CONTRACT: armSelfDrip schedules a single scheduledDrip at maturity = startTime + termSeconds
+  // (HIP-1215 allows only one self-schedule per tx + no nested rescheduling). Clamp to now+3 if past.
+  function maturityAt(start: bigint, term: bigint, now: bigint): bigint {
+    let at = start + term;
+    if (at <= now) at = now + 3n;
+    return at;
   }
 
-  it("schedules at each interval boundary (term 60s / 3 drips => +20, +40, +60)", () => {
-    expect(nextAt(1000n, 60n, 3n, 0n, 1000n)).to.equal(1020n);
-    expect(nextAt(1000n, 60n, 3n, 1n, 1000n)).to.equal(1040n);
-    expect(nextAt(1000n, 60n, 3n, 2n, 1000n)).to.equal(1060n);
+  it("schedules at startTime + termSeconds (by which every interval is due)", () => {
+    expect(maturityAt(1000n, 60n, 1000n)).to.equal(1060n);
   });
 
-  it("clamps to now+1 when the next boundary is already in the past", () => {
-    expect(nextAt(1000n, 60n, 3n, 2n, 1100n)).to.equal(1101n);
+  it("clamps to now+3 when maturity is already past", () => {
+    expect(maturityAt(0n, 60n, 1000n)).to.equal(1003n);
   });
 });
 

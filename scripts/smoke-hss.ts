@@ -166,7 +166,9 @@ async function main() {
   await (await vault.setAuthorizedSettler(claimId, rewardSrcAddr, true, { gasLimit: 200_000n })).wait();
 
   const navStart: bigint = await vault.navPerShare(poolId);
-  const armTx = await rewardSrc.armSelfDrip(scheduleId, { gasLimit: HTS_GAS_HEAVY });
+  // Attach a gas buffer: the mock is the PAYER of every scheduled execution's gas (the reward HBAR is
+  // forwarded to the vault untouched), so it needs spare HBAR to fund the chain of scheduledDrips.
+  const armTx = await rewardSrc.armSelfDrip(scheduleId, { value: 50n * HBAR, gasLimit: 12_000_000n });
   await armTx.wait();
   link("armSelfDrip", armTx.hash);
   console.log(`    armed self-drip (scheduleId ${scheduleId}); NAV start ${fmtNav(navStart)} — now waiting, NOT calling drip()...`);
