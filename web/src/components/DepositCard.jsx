@@ -120,7 +120,14 @@ export default function DepositCard({ contracts, account, onStatus, refreshKey, 
   const handleAmountChange = (e) => setAmount(sanitizeAmountInput(e.target.value));
   const handleMax = () => {
     if (balanceUnits == null) return;
-    setAmount(formatHbar(balanceUnits).replace(/,/g, ""));
+    // Deposit MAX keeps ~1 HBAR of headroom for gas — the deposit tx burns ~1.2M gas, so
+    // sending the entire HBAR balance guarantees an insufficient-funds revert. Redeem MAX
+    // (shares, not HBAR) is exact, so no headroom is reserved there.
+    const GAS_HEADROOM = ONE; // ~1 HBAR in tinybar (8dp)
+    const maxUnits = isDeposit
+      ? (balanceUnits > GAS_HEADROOM ? balanceUnits - GAS_HEADROOM : 0n)
+      : balanceUnits;
+    setAmount(formatHbar(maxUnits).replace(/,/g, ""));
   };
 
   const handleAction = async () => {

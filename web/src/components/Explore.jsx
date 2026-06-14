@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import DepositWidget from "./DepositWidget.jsx";
 import PoolDetail from "./PoolDetail.jsx";
 import Activity from "./Activity.jsx";
+import Secondary from "./Secondary.jsx";
 import {
   VAULT_CONFIGURED, CATEGORY_LABEL, CATEGORY_LOGO, RISK_CLASSES, DEAL_STATUS, poolDisplayName, EXPLORER_URL,
 } from "../lib/config.js";
@@ -148,6 +149,7 @@ export default function Explore({ contracts, account, publicClient, onStatus, re
         <button className={`ex-subtab${subTab === "pools" ? " active" : ""}`} onClick={() => setSubTab("pools")}>Pools</button>
         <button className={`ex-subtab${subTab === "deals" ? " active" : ""}`} onClick={() => setSubTab("deals")}>Deals</button>
         <button className={`ex-subtab${subTab === "activity" ? " active" : ""}`} onClick={() => setSubTab("activity")}>Activity</button>
+        <button className={`ex-subtab${subTab === "secondary" ? " active" : ""}`} onClick={() => setSubTab("secondary")}>Secondary</button>
       </div>
 
       {subTab === "pools" && (
@@ -241,6 +243,16 @@ export default function Explore({ contracts, account, publicClient, onStatus, re
       )}
 
       {subTab === "activity" && <Activity refreshKey={refreshKey} />}
+
+      {subTab === "secondary" && (
+        <Secondary
+          contracts={contracts}
+          account={account}
+          publicClient={publicClient}
+          onStatus={onStatus}
+          refreshKey={refreshKey}
+        />
+      )}
     </div>
   );
 }

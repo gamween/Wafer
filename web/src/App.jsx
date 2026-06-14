@@ -2,6 +2,7 @@ import React, { useState, useCallback, useEffect, useRef } from "react";
 import TopNav from "./components/TopNav.jsx";
 import Footer from "./components/Footer.jsx";
 import Hero from "./components/Hero.jsx";
+import HowItWorks from "./components/HowItWorks.jsx";
 import StatusBar from "./components/StatusBar.jsx";
 import DepositCard from "./components/DepositCard.jsx";
 import Explore from "./components/Explore.jsx";
@@ -160,6 +161,7 @@ export default function App() {
     return (
       <div className="landing-shell landing-locked">
         <Hero onEnter={goApp} connecting={connecting} />
+        <HowItWorks onEnter={goApp} />
         <div className="grain" aria-hidden="true" />
         <WalletModal
           open={walletModalOpen}

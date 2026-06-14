@@ -452,6 +452,16 @@ async function main() {
   console.log(`\nHashScan links:`);
   for (const l of links) console.log(`  ${l}`);
   console.log("");
+
+  // SHIP GATE: the default run and the secondary market are IN-scope SPEC §15 proofs. They run in
+  // non-fatal try/catch blocks above so a single live hiccup doesn't abort the whole smoke, but a
+  // green run must NOT mask a skipped proof — surface it loudly and exit non-zero so CI / a demo
+  // dry-run can't mistake "happy path passed" for "everything shipped".
+  if (!defaultRan || !secondaryOk) {
+    const missing = [!defaultRan && "default run", !secondaryOk && "secondary market"].filter(Boolean).join(" + ");
+    console.error(`  ✗ SHIP GATE FAILED: SPEC §15 proof(s) did not complete: ${missing}. The happy-path NAV proof still passed — see the errors above to fix the rest.\n`);
+    process.exitCode = 1;
+  }
 }
 
 main().catch((err) => {

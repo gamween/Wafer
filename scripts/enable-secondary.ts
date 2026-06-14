@@ -72,7 +72,8 @@ function predictPair(factory: string, initCodeHash: string, tokenA: string, toke
 /** Live pair-create fee in TINYBAR: factory.pairCreateFee() (tinycents) -> tinybar via Mirror Node. */
 async function feeTinybarLive(factory: any, bufferPct = 115n): Promise<bigint> {
   const tinycents: bigint = await factory.pairCreateFee();
-  const rate: any = (await (await fetch("https://testnet.mirrornode.hedera.com/api/v1/network/exchangerate")).json()).current_rate;
+  const body: any = await (await fetch("https://testnet.mirrornode.hedera.com/api/v1/network/exchangerate")).json();
+  const rate: any = body.current_rate;
   return ((tinycents * BigInt(rate.hbar_equivalent)) / BigInt(rate.cent_equivalent) * bufferPct) / 100n;
 }
 
