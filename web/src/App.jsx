@@ -1,16 +1,13 @@
 import React, { useState, useCallback, useEffect, useRef } from "react";
-import Sidebar from "./components/Sidebar.jsx";
-import AccountMenu from "./components/AccountMenu.jsx";
+import TopNav from "./components/TopNav.jsx";
+import Footer from "./components/Footer.jsx";
 import Hero from "./components/Hero.jsx";
-import HowItWorks from "./components/HowItWorks.jsx";
 import StatusBar from "./components/StatusBar.jsx";
-import Dashboard from "./components/Dashboard.jsx";
-import Pools from "./components/Pools.jsx";
-import Activity from "./components/Activity.jsx";
-import RedemptionQueue from "./components/RedemptionQueue.jsx";
+import DepositCard from "./components/DepositCard.jsx";
+import Explore from "./components/Explore.jsx";
+import Portfolio from "./components/Portfolio.jsx";
 import OperatorPortal from "./components/OperatorPortal.jsx";
 import Admin from "./components/Admin.jsx";
-import Secondary from "./components/Secondary.jsx";
 import WalletModal from "./components/WalletModal.jsx";
 import ErrorBoundary from "./components/ErrorBoundary.jsx";
 import { useWallet } from "./hooks/useWallet.js";
@@ -18,7 +15,7 @@ import { useContracts } from "./hooks/useContracts.js";
 import { formatError } from "./lib/errors.js";
 
 // Investor-mode tabs only — anything else is Admin-gated.
-const INVESTOR_TABS = new Set(["home", "pools", "deposit", "dashboard", "queue", "secondary", "activity", "operator"]);
+const INVESTOR_TABS = new Set(["home", "deposit", "explore", "dashboard", "operator", "activity", "queue"]);
 
 export default function App() {
   const { account, walletClient, publicClient, connecting, connect, disconnect, wrongNetwork, switchNetwork } = useWallet();
@@ -30,9 +27,11 @@ export default function App() {
   const [statusError, setStatusError] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
   const [walletModalOpen, setWalletModalOpen] = useState(false);
-  const [howOpen, setHowOpen] = useState(false);
   const [roles, setRoles] = useState({ isOwner: false, isOperator: false });
   const [hbarBalance, setHbarBalance] = useState(null);
+  const [search, setSearch] = useState("");
+  const [depositPoolId, setDepositPoolId] = useState(undefined); // pre-fill the Deposit card
+  const [exploreSubTab, setExploreSubTab] = useState("pools");
 
   // Coalesce rapid refreshKey bumps so an interactive action plus the periodic
   // tick don't cascade duplicate reads across screens.
@@ -59,7 +58,7 @@ export default function App() {
     return () => clearInterval(id);
   }, [account, bumpRefresh]);
 
-  // Resolve roles (owner/operator) so the sidebar can show the Operator item.
+  // Resolve roles (owner/operator) so the nav can show the Operator item.
   useEffect(() => {
     if (!account || !contracts?.configured) { setRoles({ isOwner: false, isOperator: false }); return; }
     let cancelled = false;
@@ -115,44 +114,52 @@ export default function App() {
   const closeWalletModal = useCallback(() => setWalletModalOpen(false), []);
 
   // The role switch is a pure view toggle (no wallet change). Leaving Admin view
-  // bounces any admin-only tab back to Pools so a stale Admin screen can't linger.
+  // bounces any admin-only tab back to Deposit so a stale Admin screen can't linger.
   const onRoleChange = useCallback((next) => {
     setRole(next);
-    if (next !== "admin") setTab((t) => (INVESTOR_TABS.has(t) ? t : "pools"));
+    if (next !== "admin") setTab((t) => (INVESTOR_TABS.has(t) ? t : "deposit"));
   }, []);
 
-  // Auto-close modal and navigate to pools on first connect.
+  // Tab change with side-effects for the cross-screen routing helpers.
+  const onTabChange = useCallback((next) => {
+    if (next === "explore") {
+      setExploreSubTab("pools");
+    }
+    setTab(next);
+  }, []);
+
+  // Auto-close modal and navigate to Deposit on first connect.
   useEffect(() => {
     if (account) {
       setWalletModalOpen(false);
-      setTab((t) => (t === "home" ? "pools" : t));
+      setTab((t) => (t === "home" ? "deposit" : t));
     }
   }, [account]);
 
-  // Disconnect: reset wallet state (hook clears account/clients + sets the
-  // session flag so auto-reconnect won't re-attach) and return to the hero.
+  // Disconnect: reset wallet state and return to the hero.
   const onDisconnect = useCallback(() => {
     disconnect();
     setRole("investor");
     setTab("home");
   }, [disconnect]);
 
-  const goPools = useCallback(() => {
-    if (account) setTab("pools");
+  const goApp = useCallback(() => {
+    if (account) setTab("deposit");
     else openWalletModal();
   }, [account, openWalletModal]);
 
-  const scrollToHow = useCallback(() => {
-    const el = typeof document !== "undefined" ? document.getElementById("how-it-works") : null;
-    if (el) el.scrollIntoView({ behavior: "smooth" });
+  // Open the Deposit card, optionally pre-filled with a pool (from Explore /
+  // Portfolio drilldowns).
+  const openDeposit = useCallback((poolId) => {
+    if (poolId != null) setDepositPoolId(poolId);
+    setTab("deposit");
   }, []);
 
-  // Hero / disconnected landing: shown when not connected, or when connected and
-  // the active tab is "home" (the brand wordmark routes back here).
+  // Hero / disconnected landing.
   if (!account || tab === "home") {
     return (
       <div className="landing-shell landing-locked">
-        <Hero onEnter={goPools} connecting={connecting} />
+        <Hero onEnter={goApp} connecting={connecting} />
         <div className="grain" aria-hidden="true" />
         <WalletModal
           open={walletModalOpen}
@@ -166,70 +173,74 @@ export default function App() {
 
   const adminView = role === "admin";
 
-  const TAB_TITLES = {
-    pools: "Pools",
-    deposit: "Pools",
-    dashboard: "Portfolio",
-    queue: "Redemption queue",
-    secondary: "Secondary market",
-    activity: "Activity",
-    operator: "Operator",
-    admin: "Admin",
-  };
-  const sectionTitle = TAB_TITLES[tab] || "Wafer";
-
   return (
-    <div className="shell">
-      <Sidebar
+    <div className="shell-v2">
+      <TopNav
         activeTab={tab}
-        onTabChange={setTab}
+        onTabChange={onTabChange}
+        roles={roles}
         role={role}
         onRoleChange={onRoleChange}
-        roles={roles}
+        account={account}
+        hbarBalance={hbarBalance}
+        connecting={connecting}
+        onConnect={openWalletModal}
+        onDisconnect={onDisconnect}
+        search={search}
+        onSearchChange={setSearch}
       />
 
-      <div className="shell-body">
-        <header className="topbar">
-          <h1 className="topbar-title">{sectionTitle}</h1>
-          <div className="topbar-right">
-            <span className="topbar-net">
-              <span className="topbar-net-dot" aria-hidden="true" />
-              Hedera Testnet
-            </span>
-            <AccountMenu
-              account={account}
-              hbarBalance={hbarBalance}
-              role={role}
-              onRoleChange={onRoleChange}
-              onDisconnect={onDisconnect}
-            />
+      <main className="main-v2">
+        {wrongNetwork && (
+          <div className="net-warning" role="alert" style={{ maxWidth: 1240, margin: "0 auto 1rem" }}>
+            <span>Wrong network — switch to Hedera Testnet (296) to use Wafer.</span>
+            <button onClick={onSwitchNetwork}>Switch network</button>
           </div>
-        </header>
+        )}
 
-        <main className="shell-main">
+        <StatusBar message={status} isError={statusError} onClear={clearStatus} />
 
-          {wrongNetwork && (
-            <div className="net-warning" role="alert">
-              <span>Wrong network — switch to Hedera Testnet (296) to use Wafer.</span>
-              <button onClick={onSwitchNetwork}>Switch network</button>
-            </div>
-          )}
+        <div className="container-v2">
+          <ErrorBoundary>
+            {tab === "deposit" && (
+              <DepositCard
+                contracts={contracts}
+                account={account}
+                onStatus={onStatus}
+                refreshKey={refreshKey}
+                initialPoolId={depositPoolId}
+                onConnect={openWalletModal}
+                connecting={connecting}
+              />
+            )}
+            {(tab === "explore" || tab === "pools" || tab === "activity") && (
+              <Explore
+                contracts={contracts}
+                account={account}
+                publicClient={publicClient}
+                onStatus={onStatus}
+                refreshKey={refreshKey}
+                search={search}
+                initialSubTab={tab === "activity" ? "activity" : exploreSubTab}
+                onOpenDeposit={openDeposit}
+              />
+            )}
+            {(tab === "dashboard" || tab === "queue") && (
+              <Portfolio
+                contracts={contracts}
+                account={account}
+                onStatus={onStatus}
+                refreshKey={refreshKey}
+                onOpenDeposit={openDeposit}
+              />
+            )}
+            {tab === "operator" && <OperatorPortal contracts={contracts} account={account} onStatus={onStatus} refreshKey={refreshKey} />}
+            {tab === "admin" && adminView && <Admin contracts={contracts} account={account} onStatus={onStatus} refreshKey={refreshKey} />}
+          </ErrorBoundary>
+        </div>
 
-          <StatusBar message={status} isError={statusError} onClear={clearStatus} />
-
-          <div className="container">
-            <ErrorBoundary>
-              {tab === "dashboard" && <Dashboard contracts={contracts} account={account} refreshKey={refreshKey} />}
-              {(tab === "pools" || tab === "deposit") && <Pools contracts={contracts} onStatus={onStatus} refreshKey={refreshKey} />}
-              {tab === "queue" && <RedemptionQueue contracts={contracts} account={account} onStatus={onStatus} refreshKey={refreshKey} />}
-              {tab === "operator" && <OperatorPortal contracts={contracts} account={account} onStatus={onStatus} refreshKey={refreshKey} />}
-              {tab === "admin" && adminView && <Admin contracts={contracts} account={account} onStatus={onStatus} refreshKey={refreshKey} />}
-              {tab === "secondary" && <Secondary contracts={contracts} account={account} publicClient={publicClient} onStatus={onStatus} refreshKey={refreshKey} />}
-              {tab === "activity" && <Activity refreshKey={refreshKey} />}
-            </ErrorBoundary>
-          </div>
-        </main>
-      </div>
+        <Footer onTabChange={onTabChange} />
+      </main>
 
       <div className="grain" aria-hidden="true" />
     </div>
