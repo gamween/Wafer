@@ -10,8 +10,8 @@
  *      confirm the advance was released to the operator — by the network, no keeper (or, if the
  *      schedule has not fired yet, we call releaseAdvance manually to prove the gating + fallback).
  *
- *   2. SELF-DRIP — fund a reward schedule and armSelfDrip: the MockRewardSource schedules its own
- *      scheduledDrip via HSS and each drip reschedules the next, so NAV rises with NO JS poll loop.
+ *   2. SELF-DRIP — fund a reward schedule and armSelfDrip: the MockRewardSource schedules ONE
+ *      scheduledDrip at maturity via HSS, so NAV rises with NO off-chain keeper / JS poll loop.
  *
  * Run AFTER `pnpm run deploy`. Prints HashScan links. Designed to be re-runnable. Units: HBAR crosses
  * the RPC boundary as weibar (N*1e18); the contract sees tinybar.

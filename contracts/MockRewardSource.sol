@@ -23,9 +23,9 @@ interface IWaferVaultSettle {
  */
 contract MockRewardSource is Ownable, ReentrancyGuard, HederaScheduleService {
     uint256 internal constant SUCCESS = uint256(int256(HederaResponseCodes.SUCCESS)); // 22
-    // Gas budget for an HSS-scheduled scheduledDrip: it must cover the settle (~125k, plus the HTS
-    // burn/return on the repay interval) AND the reschedule (one scheduleCall ≈ 1.3M gas), so this is
-    // generously sized — a too-small limit reverts the whole scheduled tx (no settle, chain stops).
+    // Gas budget for the HSS-scheduled scheduledDrip (a single maturity settle): it must cover the
+    // settle plus the HTS claim-NFT burn + device-NFT return on the repay interval, so it is
+    // generously sized — a too-small limit would revert the whole scheduled tx and skip the settle.
     uint256 internal constant DRIP_GAS = 6_000_000;
 
     IWaferVaultSettle public immutable vault;
@@ -43,7 +43,6 @@ contract MockRewardSource is Ownable, ReentrancyGuard, HederaScheduleService {
     }
 
     Schedule[] public schedules;
-    mapping(uint256 => bool) public selfScheduling; // scheduleId => on-chain HIP-1215 self-drip armed
 
     event Funded(uint256 indexed scheduleId, uint32 poolId, uint256 claimId, uint64 totalReward, uint64 startTime, uint64 termSeconds, uint32 dripCount);
     event Dripped(uint256 indexed scheduleId, uint32 intervalsReleased, uint64 amount);
@@ -128,10 +127,6 @@ contract MockRewardSource is Ownable, ReentrancyGuard, HederaScheduleService {
     //   HIP-1215 self-scheduling drip (no off-chain keeper / JS loop, SPEC §9)
     // -------------------------------------------------------------------------
 
-    /// @notice Arm on-chain self-scheduling for a funded schedule: each interval's drip is scheduled
-    ///         on-chain via the Hedera Schedule Service (HSS, 0x16b) and reschedules the next, until
-    ///         the term completes — replacing the off-chain keeper / JS poll loop. The contract is the
-    ///         schedule payer, so it must hold the prefunded reward HBAR (it does, from fund()).
     /// @notice Arm a keeper-free reward settlement via HSS: schedule ONE scheduledDrip at maturity
     ///         (startTime + termSeconds) that releases the full reward in a single Hedera-scheduled
     ///         transaction — no off-chain keeper, no JS loop.
@@ -145,7 +140,6 @@ contract MockRewardSource is Ownable, ReentrancyGuard, HederaScheduleService {
         require(scheduleId < schedules.length, "NO_SCHEDULE");
         Schedule storage s = schedules[scheduleId];
         require(!s.defaulted, "DEFAULTED");
-        selfScheduling[scheduleId] = true;
 
         uint64 at = s.startTime + s.termSeconds; // maturity: by now every interval is due
         if (at <= uint64(block.timestamp)) at = uint64(block.timestamp) + 3;
