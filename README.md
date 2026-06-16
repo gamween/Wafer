@@ -21,13 +21,10 @@ yield. Operators get HBAR today against the rewards their hardware will earn; in
 fungible, KYC-gated, NAV-appreciating fund share whose value rises live as those rewards stream back
 in. It's Centrifuge / Maple, specialized for DePIN — built end-to-end on the **Hedera Token Service**.
 
-> 🏆 **Winner of the "Tokenization on Hedera" bounty at [ETHGlobal New York 2026](https://ethglobal.com/events/newyork2026).**
-> Out of the field, the **Hedera** team selected Wafer for taking a genuine real-world asset — a DePIN
-> operator's *future on-chain rewards* — and turning it into a compliant, **KYC-gated tokenized fund
-> share** with a full on-chain credit lifecycle (finance → reward → NAV↑ → repaid / default) and
-> **HIP-1215 scheduled settlement** — all live and Sourcify-verified on Hedera Testnet, no slideware.
-> The bounty rewarded real-world-asset tokenization on HTS with *meaningful compliance and lifecycle
-> management*; Wafer was built to be exactly that, end to end.
+> 🏆 **Winner — "Tokenization on Hedera" at [ETHGlobal New York 2026](https://ethglobal.com/events/newyork2026).**
+> One of the year's flagship Ethereum hackathons — **486 hackers** and **682 attendees** from **152
+> cities, 44 countries, and 6 continents**. Out of that global field, the **Hedera** team awarded
+> Wafer the Hedera Token Service tokenization bounty.
 
 > [!NOTE]
 > The exact repository submitted to ETHGlobal New York 2026 is
