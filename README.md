@@ -12,8 +12,6 @@
 
 🏆 **Winner — Tokenization on Hedera ($1,500) · ETHGlobal New York 2026**
 
-[Live app](https://wafer-steel.vercel.app/) · [Contract on HashScan](https://hashscan.io/testnet/contract/0x8Fb4439f76ea7eAa6DcE88751A20981a796fb311) · [Verified source](https://repo.sourcify.dev/contracts/full_match/296/0x8Fb4439f76ea7eAa6DcE88751A20981a796fb311/)
-
 </div>
 
 Wafer turns the future on-chain rewards of physical infrastructure (DePIN) into liquid, on-chain
