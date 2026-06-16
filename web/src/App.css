@@ -180,122 +180,6 @@ a { color: inherit; }
   margin: 0 auto;
 }
 
-/* ---- Sidebar ---- */
-.sb {
-  width: var(--sidebar-w);
-  flex-shrink: 0;
-  background: var(--bg-2);
-  border-right: 1px solid var(--line);
-  display: flex;
-  flex-direction: column;
-  padding: 1.5rem 0.75rem 1.25rem;
-  position: sticky;
-  top: 0;
-  height: 100vh;
-}
-
-.sb-brand {
-  display: flex;
-  align-items: center;
-  gap: 0.625rem;
-  background: none;
-  border: none;
-  cursor: pointer;
-  padding: 0.5rem 0.6rem;
-  margin-bottom: 2rem;
-}
-/* Logo mark sits on a small warm chip so the navy runner stays legible on the
-   dark-blue sidebar (it would otherwise sink into the background). */
-.sb-logo {
-  flex-shrink: 0;
-  display: grid;
-  place-items: center;
-  width: 34px;
-  height: 34px;
-  border-radius: 9px;
-  background: linear-gradient(135deg, #f4f4f4, #d6d6d6);
-  box-shadow: 0 0 0 1px rgba(0,0,0,0.25), 0 4px 14px rgba(0,0,0,0.35), 0 0 16px var(--amber-glow);
-}
-.sb-logo-svg { display: block; }
-.sb-wordmark {
-  font-family: var(--font-display);
-  font-weight: 700;
-  font-size: 1.35rem;
-  letter-spacing: -0.02em;
-  color: var(--text);
-}
-
-.sb-nav { display: flex; flex-direction: column; gap: 0.125rem; }
-
-.sb-link {
-  position: relative;
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  background: none;
-  border: none;
-  cursor: pointer;
-  width: 100%;
-  text-align: left;
-  padding: 0.6rem 0.75rem;
-  border-radius: var(--radius-sm);
-  color: var(--text-2);
-  font-family: var(--font-body);
-  font-size: 0.94rem;
-  font-weight: 500;
-  transition: color 0.18s ease, background 0.18s ease;
-}
-.sb-link-bar {
-  position: absolute;
-  left: -0.75rem;
-  top: 50%;
-  transform: translateY(-50%) scaleY(0);
-  width: 3px;
-  height: 1.25rem;
-  border-radius: 0 3px 3px 0;
-  background: var(--amber);
-  box-shadow: 0 0 10px var(--amber-glow);
-  transition: transform 0.18s ease;
-}
-.sb-link:hover { color: var(--text); background: rgba(255,255,255,0.02); }
-.sb-link-active { color: var(--text); }
-.sb-link-active .sb-link-bar { transform: translateY(-50%) scaleY(1); }
-.sb-link-admin .sb-link-label::after {
-  content: "admin";
-  margin-left: 0.5rem;
-  font-family: var(--font-mono);
-  font-size: 0.6rem;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: var(--amber);
-  opacity: 0.7;
-}
-
-.sb-foot { margin-top: auto; padding: 0.5rem 0.5rem 0; }
-.sb-foot-label { display: block; margin-bottom: 0.5rem; font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-3); }
-.sb-roles {
-  display: flex;
-  background: var(--bg);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-sm);
-  padding: 3px;
-  gap: 3px;
-}
-.sb-role {
-  flex: 1;
-  border: none;
-  background: none;
-  cursor: pointer;
-  padding: 0.4rem 0.5rem;
-  border-radius: 7px;
-  color: var(--text-2);
-  font-family: var(--font-body);
-  font-size: 0.82rem;
-  font-weight: 500;
-  transition: all 0.18s ease;
-}
-.sb-role-active { background: var(--amber-soft); color: var(--amber-hi); }
-
 /* =============================================================================
    ACCOUNT MENU (top-right)
    ============================================================================= */
@@ -426,15 +310,6 @@ a { color: inherit; }
 }
 .how-modal-close:hover { color: var(--text); }
 
-/* Animated <Beams> backdrop behind the whole landing (fixed) + legibility scrim. */
-.landing-bg { position: fixed; inset: 0; z-index: 0; }
-.landing-bg canvas { display: block; width: 100% !important; height: 100% !important; }
-.landing-scrim {
-  position: fixed; inset: 0; z-index: 1; pointer-events: none;
-  background:
-    linear-gradient(180deg, rgba(14,30,46,0.16) 0%, rgba(14,30,46,0.40) 52%, rgba(14,30,46,0.86) 100%),
-    radial-gradient(ellipse 95% 85% at 50% 42%, transparent 52%, rgba(0,0,0,0.55) 100%);
-}
 .landing-shell > .hero,
 .landing-shell > .hiw { position: relative; z-index: 2; }
 
@@ -897,7 +772,6 @@ select option { background: var(--bg-2); color: var(--text); }
 }
 
 @media (max-width: 860px) {
-  .sb { position: fixed; left: 0; top: 0; z-index: 100; transform: translateX(-100%); transition: transform 0.2s ease; }
   .shell { padding-left: 0; }
   .hero-content, .hiw { padding-left: 1.5rem; padding-right: 1.5rem; }
   .container, .shell-topbar { padding-left: 1rem; padding-right: 1rem; }
