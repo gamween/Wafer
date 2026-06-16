@@ -19,3 +19,6 @@ typechain-types/
 
 # Local prep & internal notes (not part of the public repo)
 /notes/
+
+# CodeQuill local snapshot cache (manifests are pinned to IPFS on publish)
+.codequill/
