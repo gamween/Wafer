@@ -184,10 +184,12 @@ scripts/
   smoke.ts                full lifecycle LIVE on testnet (finance → drip → NAV↑ → repaid/default)
   smoke-hss.ts            HIP-1215 LIVE: locked advance auto-release + scheduled settle
   enable-secondary.ts     fallback SaucerSwap enable flow
+  redeploy-mock.ts        redeploy only MockRewardSource against the live vault
+  resolve-operator.ts     derive the operator Hedera id from the key (Mirror Node)
 test/                     78 pure-logic tests mirroring the contract's exact integer math
 web/                      React + Vite + viem frontend (deployed on Vercel)
 deployments/testnet.json  canonical on-chain addresses (the frontend auto-syncs from this)
-docs/                     SPEC.md · DEMO.md · ONE-PAGER.md · AUDIT.md
+SPEC.md · docs/ONE-PAGER.md · CONTRIBUTING.md   technical spec + one-pager + contributor guide
 ```
 
 ## Getting started
@@ -239,8 +241,8 @@ The canonical, always-current set lives in [`deployments/testnet.json`](deployme
   claim's settler set and capped at the expected repayment; `Ownable2Step` + a timelock on
   finance/default; an operator allowlist; a dead-shares seed against first-depositor inflation; and
   `int64` overflow guards at the HTS boundary.
-- The codebase went through a two-phase adversarial review (multi-agent audit + verification), with
-  findings fixed before redeploy — see [`docs/AUDIT.md`](docs/AUDIT.md).
+- The codebase went through a two-phase adversarial review (multi-agent audit + independent
+  verification), with all findings fixed and re-deployed.
 
 ## License
 
