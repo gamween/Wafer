@@ -16,3 +16,6 @@ artifacts/
 cache/
 typechain-types/
 *.mov
+
+# Local prep & internal notes (not part of the public repo)
+/notes/

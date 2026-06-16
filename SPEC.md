@@ -5,10 +5,9 @@ contract** on Hedera EVM (HSCS) creating/holding **HTS tokens** via `@hiero-ledg
 Scripts + frontend: TypeScript (viem + React). Settlement: **native HBAR**. Target track:
 **Hedera — Tokenization**.
 
-> This spec is the build blueprint. **If it is implemented as written, the app ships.** The current
-> deployed contract (`0xc452D2…cd0A`), `scripts/`, `test/`, and `web/` reference the OLD shape and
-> must be re-generated per §12 (Migration). Nothing is mocked except the **DePIN reward cashflow**
-> (§9), modeled on-chain by `MockRewardSource`.
+> This spec is the build blueprint, implemented as written and **live on Hedera Testnet**
+> (Sourcify-verified; canonical addresses in [`deployments/testnet.json`](deployments/testnet.json)).
+> Nothing is mocked except the **DePIN reward cashflow** (§9), modeled on-chain by `MockRewardSource`.
 
 ---
 
@@ -432,21 +431,15 @@ Gas override on HTS-touching calls (`gas ~1M`, `maxFeePerGas = liveBaseFee×5 + 
 IHRC719 + SaucerSwap router), `format.js` (8dp/tinybar + weibar boundary), `mirror.js`,
 `errors.js`. The app reads live from the deployed `VITE_VAULT_ADDRESS` (no mock mode at ship).
 
-## 12. Migration from the current contract
+## 12. Design history (shipped)
 
-The redesign **renames/splits** storage and changes signatures — enumerate so nothing breaks:
-- `Pool.totalAssets` → **`idleTinybar` + `receivableTinybar`** (totalAssets becomes a view).
-- `Claim.principalTinybar` → **`advance/expected/carry/settled/startTime/termSeconds`** (+ device
-  fields). New `Deal` struct + proposal flow. New `RedemptionRequest` queue.
-- `financeClaim(poolId, operator, principal, meta)` → **`proposeDeal` + `approveDeal` +
-  `financeClaim(dealId)`** (term/expected now come from the Deal).
-- `settleRewards` → amortized + gated + capped; `markDefault` writes down **carry, not principal**.
-- New events (D12). New keys-exempt fee config. Ownable2Step + timelock + operator whitelist.
-- **Re-generate:** `contracts/WaferVault.sol`, `contracts/MockRewardSource.sol`,
-  `contracts/MockDeviceNFT.sol`, `scripts/deploy.ts` (seed dead shares, register operator),
-  `scripts/smoke.ts` (propose→approve→finance→drip→repaid/burn; default run), `test/*` (see §13),
-  `web/lib/abi.js` + `config.js`, `deployments/testnet.json`. **Redeploy** — the old vault
-  `0xc452D2…cd0A` and its hbar-units tests (which certify the bug) are deprecated.
+The shipped contract is the amortized-cost redesign described above. For the record, the key changes
+from the earliest prototype were: `Pool.totalAssets` split into derived **`idleTinybar` +
+`receivableTinybar`** (killing the double-count bug); a single `financeClaim(poolId, operator,
+principal)` replaced by the **`proposeDeal` → `approveDeal` → `financeClaim(dealId)`** workflow;
+`settleRewards` made amortized + gated + capped and `markDefault` writing down **carry, not
+principal**; plus Ownable2Step, a timelock, the operator allowlist, and the redemption queue. All of
+this is live and verified — see [`deployments/testnet.json`](deployments/testnet.json).
 
 ## 13. Testing (required before "ship")
 

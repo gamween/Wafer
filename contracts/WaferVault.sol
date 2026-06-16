@@ -5,7 +5,6 @@ import "@hiero-ledger/hiero-contracts/token-service/HederaTokenService.sol";
 import "@hiero-ledger/hiero-contracts/token-service/IHederaTokenService.sol";
 import "@hiero-ledger/hiero-contracts/token-service/KeyHelper.sol";
 import "@hiero-ledger/hiero-contracts/token-service/ExpiryHelper.sol";
-import "@hiero-ledger/hiero-contracts/token-service/FeeHelper.sol";
 import "@hiero-ledger/hiero-contracts/common/HederaResponseCodes.sol";
 import "@hiero-ledger/hiero-contracts/schedule-service/HederaScheduleService.sol";
 import "@openzeppelin/contracts/access/Ownable2Step.sol";
@@ -57,7 +56,7 @@ interface IShareApprove {
  *   on HTS business errors (KYC not granted, frozen, ...). We therefore check responseCode == 22
  *   (SUCCESS) on EVERY HTS call and revert otherwise.
  */
-contract WaferVault is HederaTokenService, HederaScheduleService, KeyHelper, ExpiryHelper, FeeHelper, Ownable2Step, ReentrancyGuard {
+contract WaferVault is HederaTokenService, HederaScheduleService, KeyHelper, ExpiryHelper, Ownable2Step, ReentrancyGuard {
     // --- constants -----------------------------------------------------------
     uint256 internal constant ONE = 1e8; // 1.0 in tinybar / share micro-units (8 dp)
     int32 internal constant SHARE_DECIMALS = 8;
@@ -86,7 +85,7 @@ contract WaferVault is HederaTokenService, HederaScheduleService, KeyHelper, Exp
     // Gas budget for the HIP-1215 scheduled `releaseAdvance` execution (one state write + one payout).
     uint256 internal constant RELEASE_ADVANCE_GAS = 400_000;
 
-    // HIP-1215 "locked virement": if advanceLockSeconds > 0, financeClaim LOCKS the advance in the
+    // HIP-1215 "locked transfer": if advanceLockSeconds > 0, financeClaim LOCKS the advance in the
     // vault and schedules a Hedera Schedule Service (HSS, 0x16b) call that auto-releases it to the
     // operator after the window — no keeper. 0 = pay the advance immediately at finance (default).
     uint64 public advanceLockSeconds = 0;
@@ -647,7 +646,7 @@ contract WaferVault is HederaTokenService, HederaScheduleService, KeyHelper, Exp
             (bool ok, ) = payable(d.operator).call{value: d.advanceTinybar}("");
             require(ok, "HBAR_ADVANCE_FAIL");
         } else {
-            // HIP-1215 "locked virement": the advance stays in the vault (earmarked in
+            // HIP-1215 "locked transfer": the advance stays in the vault (earmarked in
             // pendingAdvanceTinybar) and an HSS-scheduled call auto-releases it at unlock time.
             uint64 unlockAt = uint64(block.timestamp) + advanceLockSeconds;
             advanceUnlockTime[claimId] = unlockAt;
