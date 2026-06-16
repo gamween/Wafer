@@ -5,14 +5,14 @@
 **InfraFi liquidity for DePIN — a KYC-gated, NAV-appreciating tokenized credit fund on Hedera.**
 
 [![Live Demo](https://img.shields.io/badge/demo-wafer--steel.vercel.app-000?style=flat-square)](https://wafer-steel.vercel.app/)
-[![Hedera Testnet](https://img.shields.io/badge/Hedera-Testnet%20(296)-7c3aed?style=flat-square)](https://hashscan.io/testnet/contract/0x4B821d6bC76203C3C21131849C40d04C84bb75d5)
-[![Sourcify](https://img.shields.io/badge/Sourcify-verified-2ecc71?style=flat-square)](https://repo.sourcify.dev/contracts/full_match/296/0x4B821d6bC76203C3C21131849C40d04C84bb75d5/)
+[![Hedera Testnet](https://img.shields.io/badge/Hedera-Testnet%20(296)-7c3aed?style=flat-square)](https://hashscan.io/testnet/contract/0x8Fb4439f76ea7eAa6DcE88751A20981a796fb311)
+[![Sourcify](https://img.shields.io/badge/Sourcify-verified-2ecc71?style=flat-square)](https://repo.sourcify.dev/contracts/full_match/296/0x8Fb4439f76ea7eAa6DcE88751A20981a796fb311/)
 [![Solidity](https://img.shields.io/badge/Solidity-0.8.24-363636?style=flat-square)](https://soliditylang.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=flat-square)](LICENSE)
 
 🏆 **Winner — Tokenization on Hedera ($1,500) · ETHGlobal New York 2026**
 
-[Live app](https://wafer-steel.vercel.app/) · [Contract on HashScan](https://hashscan.io/testnet/contract/0x4B821d6bC76203C3C21131849C40d04C84bb75d5) · [Verified source](https://repo.sourcify.dev/contracts/full_match/296/0x4B821d6bC76203C3C21131849C40d04C84bb75d5/)
+[Live app](https://wafer-steel.vercel.app/) · [Contract on HashScan](https://hashscan.io/testnet/contract/0x8Fb4439f76ea7eAa6DcE88751A20981a796fb311) · [Verified source](https://repo.sourcify.dev/contracts/full_match/296/0x8Fb4439f76ea7eAa6DcE88751A20981a796fb311/)
 
 </div>
 
@@ -107,7 +107,7 @@ asset representation, with compliance and lifecycle management at the protocol l
 | Qualification requirement | Status |
 |---|---|
 | Create / manage tokens via the **Hedera Token Service** (SDK or system contracts) | ✅ HTS system contracts (`0x167`) |
-| Deployed & demonstrated on **Hedera Testnet** | ✅ `0x4B821d6b…D5` |
+| Deployed & demonstrated on **Hedera Testnet** | ✅ `0x8Fb4439f…fb311` |
 | Public GitHub repository | ✅ this repo |
 | Contracts **verified** (HashScan / Sourcify) | ✅ Sourcify full match |
 | ≤ 5-min demo: creation, configuration, a lifecycle operation | ✅ full lifecycle (finance → reward → NAV↑ → repaid/burn → default) |
@@ -225,10 +225,10 @@ Hedera Testnet (chain 296):
 
 | Contract / token | EVM address | Hedera ID |
 |---|---|---|
-| **WaferVault** | [`0x4B821d6b…75D5`](https://hashscan.io/testnet/contract/0x4B821d6bC76203C3C21131849C40d04C84bb75d5) | `0.0.9231166` |
-| Pool share (HTS, GPU-A) | `0x…008cDB41` | [`0.0.9231169`](https://hashscan.io/testnet/token/0.0.9231169) |
-| Claim NFT (HTS) | `0x…008CDB42` | [`0.0.9231170`](https://hashscan.io/testnet/token/0.0.9231170) |
-| SaucerSwap pair (share/WHBAR) | [`0x4B6dEAcA…26B1`](https://hashscan.io/testnet/contract/0x4B6dEAcA611177F74433A57A3bF6f9b1b95BC182) | — |
+| **WaferVault** | [`0x8Fb4439f…fb311`](https://hashscan.io/testnet/contract/0x8Fb4439f76ea7eAa6DcE88751A20981a796fb311) | `0.0.9250244` |
+| Pool share (HTS, GPU-A) | `0x…008D25c5` | [`0.0.9250245`](https://hashscan.io/testnet/token/0.0.9250245) |
+| Claim NFT (HTS) | `0x…008D25c6` | [`0.0.9250246`](https://hashscan.io/testnet/token/0.0.9250246) |
+| SaucerSwap pair (share/WHBAR) | [`0x7E1aa858…B7Fd`](https://hashscan.io/testnet/contract/0x7E1aa858ff27549A77Fa7D9E1C1299c02672B7Fd) | — |
 
 The canonical, always-current set lives in [`deployments/testnet.json`](deployments/testnet.json).
 

@@ -624,5 +624,5 @@ describe.skip("WaferVault — live HTS round-trips (run via `pnpm run smoke` on 
   it("adminGrantKyc / freeze: grant/revoke + freeze/unfreeze gate HTS transfers (rc==22 checks)");
   it("enableSecondaryMarket: createPair -> grantKyc(pair) -> mint+approve -> addLiquidityETH (router NOT KYC'd)");
   it("HIP-1215 locked advance: financeClaim schedules releaseAdvance via HSS (0x16b); auto-fires at unlock, no keeper");
-  it("HIP-1215 self-drip: MockRewardSource.armSelfDrip schedules scheduledDrip which reschedules each interval, no keeper");
+  it("HIP-1215 self-drip: MockRewardSource.armSelfDrip schedules one scheduledDrip at maturity that settles the reward, no keeper");
 });
