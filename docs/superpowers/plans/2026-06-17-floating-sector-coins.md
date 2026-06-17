@@ -1125,3 +1125,24 @@ git commit -m "chore(web): verify Discover floating sector coins"
 **Placeholder scan:** No TBD/TODO/"handle edge cases"/"similar to Task N". Every code step shows full code. The Task 6 Step 1 empty CSS is intentional (filled in Task 8) and labeled. ✓
 
 **Type/name consistency:** `poolTrailingApr(poolId, deals)` and `groupBySector(pools, deals)` are defined in Task 2 and consumed identically in Tasks 5/6 and Explore. Sector object keys (`category`, `label`, `logo`, `classes[{risk,poolId,apr}]`, `maxApr`) match across `sectors.js`, `SectorCoin`, `SectorCoins`, `Discover`, and all test fixtures. `orbitPositions(count, radius)` defined and used consistently. `onOpenDeposit(poolId)` matches the existing App handler signature. CSS vars `--px/--py/--float-delay/--float-dur/--tilt` are written in `SectorCoins.jsx` and read in `discover.css`. ✓
+
+---
+
+## Post-plan follow-ups (implemented)
+
+After the 9 planned tasks, three review-driven follow-ups were implemented (all reviewed + tested, 20 tests passing, build clean):
+
+- **`fix(web): cancel pending rAF on SectorCoins unmount`** — cleanup effect so a queued parallax frame can't fire after unmount.
+- **`perf(web): lazy-load Discover route to split motion bundle`** — `React.lazy` + `Suspense`; `motion` now ships in a separate async `Discover-*.js` chunk (main bundle 760 KB → 628 KB; 230 KB → 186 KB gzip).
+- **`test(web): App routing integration test for Discover wiring`** — full `<App/>` render (hooks mocked) asserting connected landing = Discover, nav active state, and coin → class menu → Deposit-tab routing.
+- **`test(web): move ResizeObserver stub into shared test setup`** — shared with the `matchMedia` stub in `src/test/setup.js`.
+- **`feat(web): keyboard a11y for SectorCoin class menu`** — first-item focus on open, Arrow/Home/End roving (wrap), Escape closes + returns focus to the trigger, `aria-controls` wired.
+
+## Deferred (known future polish — not blocking)
+
+Surfaced by reviews; safe to defer:
+- **Menu a11y completeness:** close the menu on `Tab`; add `useId()` to the menu `id` (currently keyed on `category`, unique today); regression tests for ArrowUp-wrap / Home / End.
+- **Bundle:** main chunk still > 500 KB (Vite warning informational); further route-level code-splitting is the lever if it grows.
+- **`onRoleChange` fallback** in `App.jsx` still bounces to `deposit` (harmless — never fires for `discover`); align to the new default if that fallback is revisited.
+- **Reduced-motion:** ambient float + parallax are frozen; `motion`'s hover/tap spring (user-triggered) is intentionally left active.
+- **Assets:** swap placeholder `/logos/*.png` for the final illustrations via `CATEGORY_LOGO` (no component change).
