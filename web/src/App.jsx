@@ -6,6 +6,7 @@ import HowItWorks from "./components/HowItWorks.jsx";
 import StatusBar from "./components/StatusBar.jsx";
 import DepositCard from "./components/DepositCard.jsx";
 import Explore from "./components/Explore.jsx";
+import Discover from "./components/Discover.jsx";
 import Portfolio from "./components/Portfolio.jsx";
 import OperatorPortal from "./components/OperatorPortal.jsx";
 import Admin from "./components/Admin.jsx";
@@ -16,7 +17,7 @@ import { useContracts } from "./hooks/useContracts.js";
 import { formatError } from "./lib/errors.js";
 
 // Investor-mode tabs only — anything else is Admin-gated.
-const INVESTOR_TABS = new Set(["home", "deposit", "explore", "dashboard", "operator", "activity", "queue"]);
+const INVESTOR_TABS = new Set(["home", "discover", "deposit", "explore", "dashboard", "operator", "activity", "queue"]);
 
 export default function App() {
   const { account, walletClient, publicClient, connecting, connect, disconnect, wrongNetwork, switchNetwork } = useWallet();
@@ -133,7 +134,7 @@ export default function App() {
   useEffect(() => {
     if (account) {
       setWalletModalOpen(false);
-      setTab((t) => (t === "home" ? "deposit" : t));
+      setTab((t) => (t === "home" ? "discover" : t));
     }
   }, [account]);
 
@@ -145,7 +146,7 @@ export default function App() {
   }, [disconnect]);
 
   const goApp = useCallback(() => {
-    if (account) setTab("deposit");
+    if (account) setTab("discover");
     else openWalletModal();
   }, [account, openWalletModal]);
 
@@ -204,6 +205,13 @@ export default function App() {
 
         <div className="container-v2">
           <ErrorBoundary>
+            {tab === "discover" && (
+              <Discover
+                contracts={contracts}
+                refreshKey={refreshKey}
+                onOpenDeposit={openDeposit}
+              />
+            )}
             {tab === "deposit" && (
               <DepositCard
                 contracts={contracts}
