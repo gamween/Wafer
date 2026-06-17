@@ -3,16 +3,6 @@ import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import App from "./App.jsx";
 
-// jsdom does not ship ResizeObserver; Hero's VideoPixelGrid needs it on mount.
-// Stub it so the brief Hero flash before tab→discover doesn't crash the tests.
-if (!globalThis.ResizeObserver) {
-  globalThis.ResizeObserver = class {
-    observe() {}
-    unobserve() {}
-    disconnect() {}
-  };
-}
-
 // ---------------------------------------------------------------------------
 // Wallet + contracts mocks — keep them outside vi.mock() factories so they
 // can be imported in tests for assertions if needed.
