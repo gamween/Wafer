@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect, useRef } from "react";
+import React, { useState, useCallback, useEffect, useRef, lazy, Suspense } from "react";
 import TopNav from "./components/TopNav.jsx";
 import Footer from "./components/Footer.jsx";
 import Hero from "./components/Hero.jsx";
@@ -6,7 +6,6 @@ import HowItWorks from "./components/HowItWorks.jsx";
 import StatusBar from "./components/StatusBar.jsx";
 import DepositCard from "./components/DepositCard.jsx";
 import Explore from "./components/Explore.jsx";
-import Discover from "./components/Discover.jsx";
 import Portfolio from "./components/Portfolio.jsx";
 import OperatorPortal from "./components/OperatorPortal.jsx";
 import Admin from "./components/Admin.jsx";
@@ -15,6 +14,8 @@ import ErrorBoundary from "./components/ErrorBoundary.jsx";
 import { useWallet } from "./hooks/useWallet.js";
 import { useContracts } from "./hooks/useContracts.js";
 import { formatError } from "./lib/errors.js";
+
+const Discover = lazy(() => import("./components/Discover.jsx"));
 
 // Investor-mode tabs only — anything else is Admin-gated.
 const INVESTOR_TABS = new Set(["home", "discover", "deposit", "explore", "dashboard", "operator", "activity", "queue"]);
@@ -206,11 +207,13 @@ export default function App() {
         <div className="container-v2">
           <ErrorBoundary>
             {tab === "discover" && (
-              <Discover
-                contracts={contracts}
-                refreshKey={refreshKey}
-                onOpenDeposit={openDeposit}
-              />
+              <Suspense fallback={<div className="discover-loading" role="status">Loading…</div>}>
+                <Discover
+                  contracts={contracts}
+                  refreshKey={refreshKey}
+                  onOpenDeposit={openDeposit}
+                />
+              </Suspense>
             )}
             {tab === "deposit" && (
               <DepositCard
