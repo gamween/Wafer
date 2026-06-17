@@ -7,23 +7,13 @@ import {
   VAULT_CONFIGURED, CATEGORY_LABEL, CATEGORY_LOGO, RISK_CLASSES, DEAL_STATUS, poolDisplayName, EXPLORER_URL,
 } from "../lib/config.js";
 import { formatHbar, formatNav, formatPercent, formatTerm, dealApr, shortHash } from "../lib/format.js";
+import { poolTrailingApr } from "../lib/sectors.js";
 
 // Explore — the protocol's market surface, Uniswap-style.
 // KPI row (TVL, deployed, idle, pools, blended APR) over contract reads, then
 // three tabs: Pools (table → click opens detail + deposit), Deals (advance →
 // expected, term, implied APR, status), Activity (Mirror Node event feed).
 // `search` filters the Pools and Deals tables by name/category.
-
-function poolTrailingApr(poolId, deals) {
-  const financed = deals.filter((d) => d.poolId === poolId && (d.status === 3 || d.status === 4));
-  let wSum = 0, num = 0;
-  for (const d of financed) {
-    const apr = dealApr(d.advance, d.expected, d.term);
-    if (apr == null) continue;
-    const w = Number(d.advance); wSum += w; num += apr * w;
-  }
-  return wSum > 0 ? num / wSum : null;
-}
 
 // Tiny inline sparkline from a pool's idle/deployed split (a cheap, real "% deployed"
 // shape — no fake series). Shows a single filled bar proportion.
