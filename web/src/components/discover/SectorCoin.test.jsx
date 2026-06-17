@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import SectorCoin from "./SectorCoin.jsx";
 
@@ -44,5 +44,38 @@ describe("SectorCoin", () => {
     render(<SectorCoin sector={empty} onOpenDeposit={() => {}} />);
     expect(screen.getByRole("button", { name: /GPU \/ Compute/ })).toBeDisabled();
     expect(screen.getByText("—")).toBeInTheDocument();
+  });
+
+  // ---- keyboard a11y tests ----
+
+  it("focuses the first menuitem when the menu opens", async () => {
+    const user = userEvent.setup();
+    render(<SectorCoin sector={sector} onOpenDeposit={() => {}} />);
+    await user.click(screen.getByRole("button", { name: /GPU \/ Compute/ }));
+    const [firstItem] = screen.getAllByRole("menuitem");
+    expect(firstItem).toHaveFocus();
+  });
+
+  it("ArrowDown moves focus to the second menuitem", async () => {
+    const user = userEvent.setup();
+    render(<SectorCoin sector={sector} onOpenDeposit={() => {}} />);
+    await user.click(screen.getByRole("button", { name: /GPU \/ Compute/ }));
+    await user.keyboard("{ArrowDown}");
+    const items = screen.getAllByRole("menuitem");
+    expect(items[1]).toHaveFocus();
+  });
+
+  it("Escape closes the menu and returns focus to the trigger button", async () => {
+    const user = userEvent.setup();
+    render(<SectorCoin sector={sector} onOpenDeposit={() => {}} />);
+    const triggerButton = screen.getByRole("button", { name: /GPU \/ Compute/ });
+    await user.click(triggerButton);
+    expect(screen.getAllByRole("menuitem")).toHaveLength(3);
+    await user.keyboard("{Escape}");
+    // Wait for AnimatePresence exit animation to unmount the menu
+    await waitFor(() =>
+      expect(screen.queryAllByRole("menuitem")).toHaveLength(0)
+    );
+    expect(triggerButton).toHaveFocus();
   });
 });
