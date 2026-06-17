@@ -1,4 +1,4 @@
-import { useRef } from "react";
+import { useEffect, useRef } from "react";
 import SectorCoin from "./SectorCoin.jsx";
 import { orbitPositions } from "./layout.js";
 
@@ -9,6 +9,8 @@ export default function SectorCoins({ sectors, onOpenDeposit }) {
   const ref = useRef(null);
   const frame = useRef(0);
   const positions = orbitPositions(sectors.length);
+
+  useEffect(() => () => cancelAnimationFrame(frame.current), []);
 
   const onPointerMove = (e) => {
     const el = ref.current;
