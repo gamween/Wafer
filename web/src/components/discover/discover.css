@@ -1,1 +1,167 @@
-/* Discover hero + floating coin visuals — filled in Task 8. */
+/* Discover hero — floating DePIN sector coins. Decorative layer; the coins are the
+   only interactive elements. Palette tracks the app: deep navy bg + amber accent. */
+
+.discover-hero {
+  position: relative;
+  width: 100%;
+  min-height: clamp(420px, 70vh, 760px);
+  overflow: visible;
+}
+
+/* Centered wordmark + tagline, behind the coins. */
+.discover-center {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  text-align: center;
+  pointer-events: none;
+  z-index: 1;
+}
+.discover-wordmark { height: 40px; width: auto; opacity: 0.95; }
+.discover-tagline {
+  margin: 0;
+  font-size: 0.85rem;
+  letter-spacing: 0.02em;
+  color: rgba(255, 255, 255, 0.55);
+}
+.discover-loading {
+  position: absolute;
+  bottom: 1rem; left: 50%;
+  transform: translateX(-50%);
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.45);
+  z-index: 1;
+}
+
+/* The coin field: pointer-events:none so only coins capture input; a subtle 3D
+   parallax tilt is driven by --px/--py written from SectorCoins. */
+.coins-field {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  transform: perspective(1100px)
+    rotateY(calc(var(--px, 0) * 6deg))
+    rotateX(calc(var(--py, 0) * -6deg));
+  transform-style: preserve-3d;
+  transition: transform 0.25s ease-out;
+}
+
+/* A single coin slot. The float lives here so it composes with the inner button's
+   hover-scale (set by motion) without the two transforms fighting. */
+.coin {
+  position: absolute;
+  pointer-events: auto;
+  animation: coin-float var(--float-dur, 8s) ease-in-out infinite;
+  animation-delay: var(--float-delay, 0s);
+  will-change: transform;
+}
+@keyframes coin-float {
+  0%, 100% { transform: translate(-50%, -50%) rotate(var(--tilt, 0deg)); }
+  50%      { transform: translate(-50%, calc(-50% - 12px)) rotate(calc(var(--tilt, 0deg) * -1)); }
+}
+
+/* The coin button itself. */
+.coin-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0;
+  background: none;
+  border: 0;
+  cursor: pointer;
+  color: #fff;
+}
+.coin-btn:disabled { cursor: default; opacity: 0.5; }
+.coin-btn:focus-visible { outline: 2px solid #f59e0b; outline-offset: 6px; border-radius: 12px; }
+
+.coin-img {
+  width: clamp(56px, 7vw, 84px);
+  height: auto;
+  filter: drop-shadow(0 6px 18px rgba(0, 0, 0, 0.5));
+  transition: filter 0.18s ease;
+}
+.coin-btn:hover:not(:disabled) .coin-img {
+  filter: drop-shadow(0 10px 26px rgba(245, 158, 11, 0.45));
+}
+
+/* Hover capsule (label + max APR). Hidden until hover/focus. */
+.coin-cap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.1rem;
+  padding: 0.35rem 0.7rem;
+  border-radius: 999px;
+  background: rgba(10, 12, 18, 0.85);
+  border: 1px solid rgba(245, 158, 11, 0.35);
+  backdrop-filter: blur(6px);
+  opacity: 0;
+  transform: translateY(4px);
+  transition: opacity 0.18s ease, transform 0.18s ease;
+  white-space: nowrap;
+}
+.coin-btn:hover:not(:disabled) .coin-cap,
+.coin-btn:focus-visible .coin-cap,
+.coin-btn[aria-expanded="true"] .coin-cap {
+  opacity: 1;
+  transform: translateY(0);
+}
+.coin-cap-label { font-size: 0.72rem; font-weight: 600; letter-spacing: 0.01em; }
+.coin-cap-apr { font-size: 0.72rem; color: #f59e0b; font-variant-numeric: tabular-nums; }
+
+/* Click-expanded menu of the sector's risk-class pools. */
+.coin-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  margin: 0;
+  padding: 0.35rem;
+  list-style: none;
+  min-width: 168px;
+  border-radius: 12px;
+  background: rgba(10, 12, 18, 0.96);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
+  z-index: 6;
+}
+.coin-menu-title {
+  padding: 0.3rem 0.6rem 0.4rem;
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: rgba(255, 255, 255, 0.45);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+  margin-bottom: 0.25rem;
+}
+.coin-menu-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  width: 100%;
+  padding: 0.45rem 0.6rem;
+  background: none;
+  border: 0;
+  border-radius: 8px;
+  cursor: pointer;
+  color: #fff;
+  font-size: 0.8rem;
+}
+.coin-menu-row:hover { background: rgba(245, 158, 11, 0.14); }
+.coin-menu-class { color: rgba(255, 255, 255, 0.8); }
+.coin-menu-apr { color: #f59e0b; font-variant-numeric: tabular-nums; }
+
+@media (prefers-reduced-motion: reduce) {
+  .coin {
+    animation: none;
+    transform: translate(-50%, -50%) rotate(var(--tilt, 0deg));
+  }
+  .coins-field { transform: none; transition: none; }
+}
