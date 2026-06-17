@@ -1,4 +1,4 @@
-import { defineConfig } from "vite";
+import { defineConfig } from "vitest/config";
 import react from "@vitejs/plugin-react";
 
 export default defineConfig({
@@ -15,5 +15,10 @@ export default defineConfig({
       // Allow importing the repo-root deployments/testnet.json (one level above web/).
       allow: [".."],
     },
+  },
+  test: {
+    environment: "jsdom",
+    globals: true,
+    setupFiles: "./src/test/setup.js",
   },
 });
