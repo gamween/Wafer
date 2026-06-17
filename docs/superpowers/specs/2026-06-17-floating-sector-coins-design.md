@@ -164,9 +164,15 @@ Additive only — no handler is modified.
 ## 11. What is explicitly NOT touched
 
 Contracts, ABIs, `useContracts`, `useWallet`, `DepositCard`/`DepositWidget`,
-`Explore`, `Portfolio`, `OperatorPortal`, `Admin`, and every existing handler
-(`onOpenDeposit`, `onTabChange`, `connect`, etc.). The only edits to existing files
-are the additive routing wiring in `App.jsx` and a nav item in `TopNav.jsx`.
+`Portfolio`, `OperatorPortal`, `Admin`, and every existing handler (`onOpenDeposit`,
+`onTabChange`, `connect`, etc.).
+
+Edits to existing files are limited to:
+- `App.jsx` — additive routing wiring (new `discover` tab, default landing).
+- `TopNav.jsx` — one nav item.
+- `Explore.jsx` — **pure refactor only**: its private `poolTrailingApr` helper moves
+  into `sectors.js` and `Explore` imports it instead (realizes §10's single source of
+  truth). No behavior change; a test locks the extracted function's output.
 
 ## 12. Testing
 
