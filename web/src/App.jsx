@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect, useRef } from "react";
+import React, { useState, useCallback, useEffect, useRef, lazy, Suspense } from "react";
 import TopNav from "./components/TopNav.jsx";
 import Footer from "./components/Footer.jsx";
 import Hero from "./components/Hero.jsx";
@@ -15,8 +15,10 @@ import { useWallet } from "./hooks/useWallet.js";
 import { useContracts } from "./hooks/useContracts.js";
 import { formatError } from "./lib/errors.js";
 
+const Discover = lazy(() => import("./components/Discover.jsx"));
+
 // Investor-mode tabs only — anything else is Admin-gated.
-const INVESTOR_TABS = new Set(["home", "deposit", "explore", "dashboard", "operator", "activity", "queue"]);
+const INVESTOR_TABS = new Set(["home", "discover", "deposit", "explore", "dashboard", "operator", "activity", "queue"]);
 
 export default function App() {
   const { account, walletClient, publicClient, connecting, connect, disconnect, wrongNetwork, switchNetwork } = useWallet();
@@ -133,7 +135,7 @@ export default function App() {
   useEffect(() => {
     if (account) {
       setWalletModalOpen(false);
-      setTab((t) => (t === "home" ? "deposit" : t));
+      setTab((t) => (t === "home" ? "discover" : t));
     }
   }, [account]);
 
@@ -145,7 +147,7 @@ export default function App() {
   }, [disconnect]);
 
   const goApp = useCallback(() => {
-    if (account) setTab("deposit");
+    if (account) setTab("discover");
     else openWalletModal();
   }, [account, openWalletModal]);
 
@@ -204,6 +206,15 @@ export default function App() {
 
         <div className="container-v2">
           <ErrorBoundary>
+            {tab === "discover" && (
+              <Suspense fallback={<div className="discover-loading" role="status">Loading…</div>}>
+                <Discover
+                  contracts={contracts}
+                  refreshKey={refreshKey}
+                  onOpenDeposit={openDeposit}
+                />
+              </Suspense>
+            )}
             {tab === "deposit" && (
               <DepositCard
                 contracts={contracts}

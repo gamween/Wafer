@@ -46,6 +46,7 @@ export default function TopNav({
   const adminView = role === "admin";
 
   const nav = [
+    { id: "discover", label: "Discover" },
     { id: "deposit", label: "Deposit" },
     { id: "explore", label: "Explore" },
     { id: "dashboard", label: "Portfolio" },
