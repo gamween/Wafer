@@ -24,11 +24,6 @@ in. It's Centrifuge / Maple, specialized for DePIN — built end-to-end on the *
 > cities, 44 countries, and 6 continents**. Out of that global field, the **Hedera** team awarded
 > Wafer the Hedera Token Service tokenization bounty.
 
-> [!NOTE]
-> The exact repository submitted to ETHGlobal New York 2026 is
-> [`aiden-fianso/Wafer`](https://github.com/aiden-fianso/Wafer) (frozen at submission). This
-> repository is the continued, post-hackathon development of the project.
-
 ## Table of contents
 
 - [Why DePIN](#why-depin)
@@ -192,7 +187,7 @@ scripts/
 test/                     78 pure-logic tests mirroring the contract's exact integer math
 web/                      React + Vite + viem frontend (deployed on Vercel)
 deployments/testnet.json  canonical on-chain addresses (the frontend auto-syncs from this)
-SPEC.md · docs/ONE-PAGER.md · CONTRIBUTING.md   technical spec + one-pager + contributor guide
+SPEC.md · CONTRIBUTING.md   technical spec + contributor guide
 ```
 
 ## Getting started

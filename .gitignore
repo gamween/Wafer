@@ -17,8 +17,8 @@ cache/
 typechain-types/
 *.mov
 
-# Local prep & internal notes (not part of the public repo)
-/notes/
+# Project docs & internal prep (kept local, not pushed)
+/docs/
 
 # CodeQuill local snapshot cache (manifests are pinned to IPFS on publish)
 .codequill/
