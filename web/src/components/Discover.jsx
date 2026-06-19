@@ -33,7 +33,7 @@ export default function Discover({ contracts, refreshKey, onOpenDeposit }) {
   return (
     <section className="discover-hero" aria-label="Discover sectors">
       <div className="discover-center">
-        <img className="discover-wordmark" src="/wafer-logo.png" alt="Wafer" />
+        <img className="discover-wordmark" src="/brand/wafer-band.svg" alt="Wafer" />
         <p className="discover-tagline">Hover a sector for its best yield · click to pick a pool</p>
       </div>
       <SectorCoins sectors={sectors} onOpenDeposit={onOpenDeposit} />
