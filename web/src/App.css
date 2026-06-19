@@ -47,8 +47,8 @@
   /* Helvetica everywhere — system font (license-free; Mac/iOS have it, Arial is the
      metric-compatible Windows fallback). Weights: Light 300 / Regular 400 / Bold 700.
      A real monospace is kept ONLY for addresses/hashes (column alignment). */
-  --font-display: "Helvetica Neue", Helvetica, Arial, sans-serif;
-  --font-body: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --font-display: Helvetica, "Helvetica Neue", Arial, sans-serif;
+  --font-body: Helvetica, "Helvetica Neue", Arial, sans-serif;
   --font-mono: ui-monospace, "SF Mono", Menlo, monospace;
 }
 
