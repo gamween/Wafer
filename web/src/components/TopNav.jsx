@@ -119,7 +119,7 @@ function BrandMenu({ onTabChange }) {
   return (
     <div className="tn-brand-wrap" ref={ref}>
       <button className="tn-brand" onClick={() => onTabChange("home")} aria-label="Wafer — home">
-        <img className="tn-logo-img" src="/brand/wafer-band.svg" alt="Wafer" style={{ height: 22, width: "auto", display: "block" }} />
+        <img className="tn-logo-img" src="/brand/wafer-wordmark-black.svg" alt="Wafer" style={{ height: 22, width: "auto", display: "block" }} />
       </button>
       <button className="tn-brand-caret" onClick={() => setOpen((o) => !o)} aria-expanded={open} aria-haspopup="menu" aria-label="Wafer menu">
         <Caret open={open} />
