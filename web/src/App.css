@@ -6,22 +6,23 @@
    ============================================================================= */
 
 :root {
-  /* ---- Palette (ART-DIRECTION v2 §1) ---- */
-  /* Black & white theme — matches the landing title; the old blue is gone. */
-  --bg:          #060606; /* black (base) */
-  --bg-2:        #0E0E0E; /* panels / sidebar */
-  --surface:     #151515; /* cards */
-  --surface-hi:  #1F1F1F; /* card hover / elevation */
-  --line:        #2A2A2A; /* borders (grey) */
-  --amber:       #FFFFFF; /* primary accent — now WHITE */
-  --amber-hi:    #E8E8E8; /* accent hover */
-  --amber-soft:  rgba(255, 255, 255, 0.10); /* fills, halos */
-  --amber-glow:  rgba(255, 255, 255, 0.16);
-  --text:        #FFFFFF; /* white */
-  --text-2:      #9B9B9B; /* secondary grey */
-  --text-3:      #5F5F5F; /* tertiary / labels */
-  --up:          #7FD49B; /* NAV up — muted green (kept for P&L legibility) */
-  --down:        #E08A6B; /* NAV down / default — muted red (kept for P&L) */
+  /* ---- Monochrome LIGHT theme — the connected app runs on white so the (black)
+     logos pop. The marketing landing stays DARK: its tokens are re-overridden on
+     .landing-shell below. ---- */
+  --bg:          #FFFFFF; /* white (app base) */
+  --bg-2:        #FAFAFA; /* panels / sidebar */
+  --surface:     #F6F6F6; /* cards */
+  --surface-hi:  #EDEDED; /* card hover / elevation */
+  --line:        #E4E4E4; /* borders */
+  --amber:       #0A0A0A; /* primary accent — black (monochrome) */
+  --amber-hi:    #000000; /* accent hover */
+  --amber-soft:  rgba(0, 0, 0, 0.06); /* fills, halos */
+  --amber-glow:  rgba(0, 0, 0, 0.10);
+  --text:        #0A0A0A; /* near-black ink */
+  --text-2:      #5F5F5F; /* secondary grey */
+  --text-3:      #8A8A8A; /* tertiary / labels */
+  --up:          #1A7F4B; /* NAV up — green (darkened for white bg) */
+  --down:        #C0462A; /* NAV down / default — red (darkened for white bg) */
 
   /* Back-compat aliases for existing inline styles / older class names. */
   --accent: var(--amber);
@@ -43,9 +44,12 @@
 
   --sidebar-w: 248px;
 
-  --font-display: "Space Grotesk", "Inter", system-ui, sans-serif;
-  --font-body: "Inter", system-ui, -apple-system, sans-serif;
-  --font-mono: "JetBrains Mono", "IBM Plex Mono", ui-monospace, "SF Mono", monospace;
+  /* Helvetica everywhere — system font (license-free; Mac/iOS have it, Arial is the
+     metric-compatible Windows fallback). Weights: Light 300 / Regular 400 / Bold 700.
+     A real monospace is kept ONLY for addresses/hashes (column alignment). */
+  --font-display: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --font-body: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", Menlo, monospace;
 }
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -108,7 +112,7 @@ a { color: inherit; }
   min-height: 100vh;
   display: flex;
   background:
-    radial-gradient(ellipse 60% 50% at 100% 0%, rgba(255,255,255,0.05), transparent 60%),
+    radial-gradient(ellipse 60% 50% at 100% 0%, rgba(0,0,0,0.05), transparent 60%),
     var(--bg);
 }
 
@@ -284,7 +288,14 @@ a { color: inherit; }
 /* =============================================================================
    HERO (ART-DIRECTION §4)
    ============================================================================= */
-.landing-shell { position: relative; min-height: 100vh; background: var(--bg); overflow-x: hidden; }
+/* Landing stays DARK — re-establish the dark palette for this subtree only. */
+.landing-shell {
+  --bg: #060606; --bg-2: #0E0E0E; --surface: #151515; --surface-hi: #1F1F1F;
+  --line: #2A2A2A; --amber: #FFFFFF; --amber-hi: #E8E8E8;
+  --amber-soft: rgba(255, 255, 255, 0.10); --amber-glow: rgba(255, 255, 255, 0.16);
+  --text: #FFFFFF; --text-2: #9B9B9B; --text-3: #5F5F5F;
+  position: relative; min-height: 100vh; background: var(--bg); overflow-x: hidden;
+}
 /* Single-screen landing: lock scroll (the hero is exactly one viewport). */
 .landing-locked { height: 100vh; overflow: hidden; }
 
@@ -339,8 +350,8 @@ a { color: inherit; }
   background-position: center;
   /* CSS-only fallback when no hero image is present: radial amber on near-black. */
   background-image:
-    radial-gradient(ellipse 70% 60% at 70% 35%, rgba(255,255,255,0.22), transparent 60%),
-    radial-gradient(ellipse 90% 70% at 30% 90%, rgba(255,255,255,0.06), transparent 55%),
+    radial-gradient(ellipse 70% 60% at 70% 35%, rgba(0,0,0,0.22), transparent 60%),
+    radial-gradient(ellipse 90% 70% at 30% 90%, rgba(0,0,0,0.06), transparent 55%),
     linear-gradient(180deg, #12283A, #0A1622);
   transform: scale(1.06);
   opacity: 0;
@@ -377,8 +388,8 @@ a { color: inherit; }
   display: inline-flex; align-items: center; gap: 0.5rem;
   margin-bottom: 1.6rem;
   padding: 0.4rem 1rem;
-  border: 1px solid rgba(255,255,255,0.12);
-  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(0,0,0,0.12);
+  background: rgba(0,0,0,0.05);
   backdrop-filter: blur(6px);
   border-radius: 999px;
   font-size: 0.85rem;
@@ -387,15 +398,15 @@ a { color: inherit; }
 .hero-cta { justify-content: center; }
 .hero-btn { display: inline-flex; align-items: center; gap: 0.5rem; height: 48px; padding: 0 1.8rem; border-radius: 999px; }
 .btn-glass {
-  border: 1px solid rgba(255,255,255,0.2);
-  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(0,0,0,0.2);
+  background: rgba(0,0,0,0.06);
   backdrop-filter: blur(6px);
   color: var(--text);
   font-weight: 500;
   cursor: pointer;
   transition: background 0.2s ease, border-color 0.2s ease;
 }
-.btn-glass:hover { background: rgba(255,255,255,0.12); border-color: rgba(255,255,255,0.3); }
+.btn-glass:hover { background: rgba(0,0,0,0.12); border-color: rgba(0,0,0,0.3); }
 .hero-in .hero-content { opacity: 1; transform: translateY(0); }
 
 .hero-eyebrow { display: inline-block; margin-bottom: 1.25rem; color: var(--amber); }
@@ -432,7 +443,7 @@ a { color: inherit; }
   padding: 1.75rem 1.5rem;
   transition: background 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
 }
-.hiw-card:hover { background: var(--surface-hi); border-color: rgba(255,255,255,0.3); transform: translateY(-3px); }
+.hiw-card:hover { background: var(--surface-hi); border-color: rgba(0,0,0,0.3); transform: translateY(-3px); }
 .hiw-num { display: block; font-size: 0.85rem; color: var(--amber); margin-bottom: 1.25rem; }
 .hiw-step-title { font-size: 1.1rem; margin-bottom: 0.6rem; }
 .hiw-step-desc { font-size: 0.92rem; line-height: 1.6; color: var(--text-2); }
@@ -529,7 +540,7 @@ a { color: inherit; }
   margin-bottom: 1.25rem;
   transition: background 0.2s ease, border-color 0.2s ease;
 }
-.card:hover { border-color: rgba(255,255,255,0.18); }
+.card:hover { border-color: rgba(0,0,0,0.18); }
 .card h2 { font-size: 1.35rem; margin-bottom: 1.1rem; }
 .card h3 {
   font-size: 11px;
@@ -678,7 +689,7 @@ a.mt-oracle-label:hover { color: var(--amber); }
 
 .vault-action-btn { width: 100%; margin-top: 0.5rem; }
 .vault-error-msg { display: flex; align-items: center; gap: 0.5rem; background: rgba(224,138,107,0.08); border: 1px solid rgba(224,138,107,0.3); border-radius: var(--radius-sm); padding: 0.6rem 0.75rem; color: var(--down); font-size: 0.8rem; margin: 0.75rem 0; }
-.wafer-queue-notice { background: var(--amber-soft); border: 1px solid rgba(255,255,255,0.3); border-radius: var(--radius-sm); padding: 0.6rem 0.75rem; color: var(--amber-hi); font-size: 0.8rem; line-height: 1.5; margin: 0.75rem 0; }
+.wafer-queue-notice { background: var(--amber-soft); border: 1px solid rgba(0,0,0,0.3); border-radius: var(--radius-sm); padding: 0.6rem 0.75rem; color: var(--amber-hi); font-size: 0.8rem; line-height: 1.5; margin: 0.75rem 0; }
 
 /* =============================================================================
    FORMS / ADMIN / OPERATOR
@@ -794,7 +805,7 @@ select option { background: var(--bg-2); color: var(--text); }
   display: flex;
   flex-direction: column;
   background:
-    radial-gradient(ellipse 70% 50% at 50% -10%, rgba(255,255,255,0.045), transparent 60%),
+    radial-gradient(ellipse 70% 50% at 50% -10%, rgba(0,0,0,0.045), transparent 60%),
     var(--bg);
 }
 
@@ -940,7 +951,7 @@ select option { background: var(--bg-2); color: var(--text); }
   padding: 0.6rem 1.25rem; cursor: pointer;
   transition: background 0.18s ease, box-shadow 0.18s ease, transform 0.08s ease;
 }
-.tn-connect:hover:not(:disabled) { background: var(--amber-hi); box-shadow: 0 6px 24px rgba(255,255,255,0.18); }
+.tn-connect:hover:not(:disabled) { background: var(--amber-hi); box-shadow: 0 6px 24px rgba(0,0,0,0.18); }
 .tn-connect:active:not(:disabled) { transform: translateY(1px); }
 .tn-connect:disabled { opacity: 0.5; cursor: not-allowed; }
 
@@ -948,7 +959,7 @@ select option { background: var(--bg-2); color: var(--text); }
 .acct-avatar {
   width: 22px; height: 22px; border-radius: 50%;
   flex-shrink: 0;
-  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.18);
+  box-shadow: inset 0 0 0 1px rgba(0,0,0,0.18);
 }
 .acct-avatar-lg { width: 34px; height: 34px; }
 .acct-menu-head { display: flex; align-items: center; gap: 0.6rem; }
@@ -1087,7 +1098,7 @@ select option { background: var(--bg-2); color: var(--text); }
   padding: 1rem; cursor: pointer;
   transition: background 0.18s ease, box-shadow 0.18s ease, transform 0.08s ease;
 }
-.dc-action:hover:not(:disabled) { background: var(--amber-hi); box-shadow: 0 8px 30px rgba(255,255,255,0.16); }
+.dc-action:hover:not(:disabled) { background: var(--amber-hi); box-shadow: 0 8px 30px rgba(0,0,0,0.16); }
 .dc-action:active:not(:disabled) { transform: translateY(1px); }
 .dc-action:disabled { opacity: 0.4; cursor: not-allowed; }
 
@@ -1110,7 +1121,7 @@ select option { background: var(--bg-2); color: var(--text); }
   display: flex; flex-direction: column; gap: 0.3rem;
   transition: border-color 0.18s ease;
 }
-.ex-kpi:hover { border-color: rgba(255,255,255,0.18); }
+.ex-kpi:hover { border-color: rgba(0,0,0,0.18); }
 .ex-kpi-label { font-size: 0.78rem; color: var(--text-2); }
 .ex-kpi-val {
   font-family: var(--font-mono); font-variant-numeric: tabular-nums;
