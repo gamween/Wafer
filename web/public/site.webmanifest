@@ -1,0 +1,12 @@
+{
+  "name": "Wafer",
+  "short_name": "Wafer",
+  "description": "InfraFi liquidity for DePIN on Hedera",
+  "icons": [
+    { "src": "/icon-192.png", "type": "image/png", "sizes": "192x192" },
+    { "src": "/icon-512.png", "type": "image/png", "sizes": "512x512" }
+  ],
+  "theme_color": "#000000",
+  "background_color": "#060606",
+  "display": "standalone"
+}
