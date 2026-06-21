@@ -1,5 +1,5 @@
-/* Discover hero — floating DePIN sector coins. Decorative layer; the coins are the
-   only interactive elements. Palette tracks the app: deep navy bg + amber accent. */
+/* Discover hero — floating DePIN sector coins. Monochrome, on the white app:
+   black coins, white glass capsule/menu, black ink. No accent colour. */
 
 .discover-hero {
   position: relative;
@@ -21,12 +21,12 @@
   pointer-events: none;
   z-index: 1;
 }
-.discover-wordmark { height: 40px; width: auto; opacity: 0.95; }
+.discover-wordmark { height: 40px; width: auto; }
 .discover-tagline {
   margin: 0;
   font-size: 0.85rem;
   letter-spacing: 0.02em;
-  color: rgba(0, 0, 0, 0.55);
+  color: rgba(0, 0, 0, 0.5);
 }
 .discover-loading {
   position: absolute;
@@ -38,7 +38,7 @@
 }
 
 /* The coin field: pointer-events:none so only coins capture input; a subtle 3D
-   parallax tilt is driven by --px/--py written from SectorCoins. */
+   parallax tilt driven by --px/--py from SectorCoins. */
 .coins-field {
   position: absolute;
   inset: 0;
@@ -70,36 +70,37 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.55rem;
   padding: 0;
   background: none;
   border: 0;
   cursor: pointer;
-  color: #fff;
+  color: #0a0a0a;
 }
-.coin-btn:disabled { cursor: default; opacity: 0.5; }
-.coin-btn:focus-visible { outline: 2px solid #f59e0b; outline-offset: 6px; border-radius: 12px; }
+.coin-btn:disabled { cursor: default; opacity: 0.45; }
+.coin-btn:focus-visible { outline: 2px solid #000; outline-offset: 6px; border-radius: 12px; }
 
 .coin-img {
   width: clamp(56px, 7vw, 84px);
   height: auto;
-  filter: drop-shadow(0 6px 18px rgba(0, 0, 0, 0.5));
-  transition: filter 0.18s ease;
+  filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.14));
+  transition: filter 0.18s ease, transform 0.18s ease;
 }
 .coin-btn:hover:not(:disabled) .coin-img {
-  filter: drop-shadow(0 10px 26px rgba(245, 158, 11, 0.45));
+  filter: drop-shadow(0 8px 20px rgba(0, 0, 0, 0.22));
 }
 
-/* Hover capsule (label + max APR). Hidden until hover/focus. */
+/* Hover capsule (label + max APR) — white glass, black ink. Hidden until hover. */
 .coin-cap {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 0.1rem;
-  padding: 0.35rem 0.7rem;
+  padding: 0.35rem 0.75rem;
   border-radius: 999px;
-  background: rgba(10, 12, 18, 0.85);
-  border: 1px solid rgba(245, 158, 11, 0.35);
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12);
   backdrop-filter: blur(6px);
   opacity: 0;
   transform: translateY(4px);
@@ -112,10 +113,10 @@
   opacity: 1;
   transform: translateY(0);
 }
-.coin-cap-label { font-size: 0.72rem; font-weight: 600; letter-spacing: 0.01em; }
-.coin-cap-apr { font-size: 0.72rem; color: #f59e0b; font-variant-numeric: tabular-nums; }
+.coin-cap-label { font-size: 0.72rem; font-weight: 600; letter-spacing: 0.01em; color: #0a0a0a; }
+.coin-cap-apr { font-size: 0.72rem; font-weight: 600; color: #0a0a0a; font-variant-numeric: tabular-nums; }
 
-/* Click-expanded menu of the sector's risk-class pools. */
+/* Click-expanded menu of the sector's risk-class pools — white card, black ink. */
 .coin-menu {
   position: absolute;
   top: calc(100% + 8px);
@@ -124,11 +125,11 @@
   margin: 0;
   padding: 0.35rem;
   list-style: none;
-  min-width: 168px;
+  min-width: 184px;
   border-radius: 12px;
-  background: rgba(10, 12, 18, 0.96);
-  border: 1px solid rgba(0, 0, 0, 0.1);
-  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
+  background: #ffffff;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.16);
   z-index: 6;
 }
 .coin-menu-title {
@@ -137,7 +138,7 @@
   text-transform: uppercase;
   letter-spacing: 0.06em;
   color: rgba(0, 0, 0, 0.45);
-  border-bottom: 1px solid rgba(0, 0, 0, 0.07);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
   margin-bottom: 0.25rem;
 }
 .coin-menu-row {
@@ -146,17 +147,17 @@
   align-items: center;
   gap: 1rem;
   width: 100%;
-  padding: 0.45rem 0.6rem;
+  padding: 0.5rem 0.6rem;
   background: none;
   border: 0;
   border-radius: 8px;
   cursor: pointer;
-  color: #fff;
-  font-size: 0.8rem;
+  color: #0a0a0a;
+  font-size: 0.82rem;
 }
-.coin-menu-row:hover { background: rgba(245, 158, 11, 0.14); }
-.coin-menu-class { color: rgba(0, 0, 0, 0.8); }
-.coin-menu-apr { color: #f59e0b; font-variant-numeric: tabular-nums; }
+.coin-menu-row:hover { background: rgba(0, 0, 0, 0.05); }
+.coin-menu-class { color: rgba(0, 0, 0, 0.7); }
+.coin-menu-apr { color: #0a0a0a; font-weight: 600; font-variant-numeric: tabular-nums; }
 
 @media (prefers-reduced-motion: reduce) {
   .coin {

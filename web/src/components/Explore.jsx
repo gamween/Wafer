@@ -3,7 +3,6 @@ import DepositWidget from "./DepositWidget.jsx";
 import PoolDetail from "./PoolDetail.jsx";
 import Activity from "./Activity.jsx";
 import Secondary from "./Secondary.jsx";
-import SectorMark from "./SectorMark.jsx";
 import {
   VAULT_CONFIGURED, CATEGORY_LABEL, CATEGORY_LOGO, RISK_CLASSES, DEAL_STATUS, poolDisplayName, EXPLORER_URL,
 } from "../lib/config.js";
@@ -165,7 +164,7 @@ export default function Explore({ contracts, account, publicClient, onStatus, re
                     <td><div className="mt-cell"><span className="mt-lltv">{i + 1}</span></div></td>
                     <td>
                       <div className="mt-cell">
-                        <div className="mt-network-icon"><SectorMark logo={p.logo} grade={p.risk} alt={p.network} size={44} /></div>
+                        <div className="mt-network-icon"><img src={p.logo} alt={p.network} width="44" height="44" /></div>
                         <div className="mt-token" style={{ marginLeft: "0.5rem" }}>
                           <span className="mt-token-name">{p.name}</span>
                           <span className="mt-oracle-label" style={{ marginLeft: "0.5rem" }}>{p.network}</span>
